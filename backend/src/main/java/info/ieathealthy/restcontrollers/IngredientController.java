@@ -33,7 +33,7 @@ public class IngredientController {
     }
 
     //need to handle errors in retrieving ingredients
-    @RequestMapping(name="/ingredient", method=RequestMethod.GET)
+    @RequestMapping(value="/ingredient", method=RequestMethod.GET)
     public Ingredient ingredient(@RequestParam(value="name") String name){
 
         Ingredient ing = _ingredientCollection.find(regex("shrtDesc", name)).first();
