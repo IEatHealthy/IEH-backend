@@ -12,6 +12,14 @@ import static com.mongodb.client.model.Filters.*;
 import info.ieathealthy.models.User;
 import org.mindrot.jbcrypt.BCrypt;
 
+//JWT imports
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.impl.crypto.MacProvider;
+import java.security.Key;
+import java.util.Calendar;
+import java.util.Date;
+
 @RestController
 public class UserController {
     //extra stuff stored already
@@ -41,7 +49,32 @@ public class UserController {
             boolean authorized = BCrypt.checkpw(password, userInfo.getHash());
 
             if (authorized) {
-                return new ResponseEntity<>(userInfo, HttpStatus.ACCEPTED);
+                //give tokens default expiration 2 weeks from
+                //date of issue
+                Calendar calendar = Calendar.getInstance();
+                Date issueDate = calendar.getTime();
+                calendar.add(Calendar.DAY_OF_YEAR, 14);
+                Date dateOfExpiration = calendar.getTime();
+
+                //create a Web Token to return
+                //Use Mac for now, switch to RsaProvider in future
+                Key key = MacProvider.generateKey();
+
+                //more claims should be added to token as API evolves
+                //build a JWT for i-eat-healthy application
+                String userAccessToken = Jwts.builder()
+                        .setSubject(email)
+                        .setExpiration(dateOfExpiration)
+                        .setIssuedAt(issueDate)
+                        .setAudience("i-eat-healthy")
+                        .claim("permission", "user")
+                        .signWith(SignatureAlgorithm.HS512, key)
+                        .compact();
+
+                //return with the token and the appropriate http status
+                return new ResponseEntity<>(userAccessToken, HttpStatus.FOUND);
+
+
             } else {
                 return new ResponseEntity<>(HttpStatus.FORBIDDEN);
             }
