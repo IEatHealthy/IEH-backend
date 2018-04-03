@@ -28,17 +28,20 @@ public class UserController {
     private final CodecRegistry _userCodec;
     private final MongoDatabase _userDb;
     private final MongoCollection<User> _userCollection;
+    private final Key _sigKey;
+//    private final Key jwtKey;
 
-    public UserController(@Qualifier("mongoClient") final MongoClient client, @Qualifier("mongoCodecRegistry") final CodecRegistry registry){
+    public UserController(@Qualifier("mongoClient") final MongoClient client, @Qualifier("mongoCodecRegistry") final CodecRegistry registry, final Key sigKey){
         //initialize mongo stuff for use
         this._client = client;
         this._userCodec = registry;
         this._userDb = client.getDatabase("i-eat-healthy");
         this._userCollection = this._userDb.getCollection("users", User.class).withCodecRegistry(registry);
+        this._sigKey = sigKey;
     }
 
     //TODO handle all edge cases
-    @RequestMapping(value="/user/{email}/{password}", method=RequestMethod.GET)
+    @RequestMapping(value="/api/user/{email}/{password}", method=RequestMethod.GET)
     public ResponseEntity<?> getUserAccount (@PathVariable String email, @PathVariable String password){
 
         //in future will want to check to make sure only
@@ -58,7 +61,7 @@ public class UserController {
 
                 //create a Web Token to return
                 //Use Mac for now, switch to RsaProvider in future
-                Key key = MacProvider.generateKey();
+//                Key key = MacProvider.generateKey();
 
                 //more claims should be added to token as API evolves
                 //build a JWT for i-eat-healthy application
@@ -68,7 +71,7 @@ public class UserController {
                         .setIssuedAt(issueDate)
                         .setAudience("i-eat-healthy")
                         .claim("permission", "user")
-                        .signWith(SignatureAlgorithm.HS512, key)
+                        .signWith(SignatureAlgorithm.HS512, _sigKey)
                         .compact();
 
                 //return with the token and the appropriate http status
