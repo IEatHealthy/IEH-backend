@@ -3,37 +3,20 @@ package info.ieathealthy.models;
 import org.bson.types.ObjectId;
 import org.bson.types.Binary;
 import java.util.List;
+import java.util.ArrayList;
 
 
-
-class IngredientItem {
-    private ObjectId ingredientId;
-    private String unitOfMeasure;
-    private double amount;
-
-    public IngredientItem(ObjectId ingredientId, String unitOfMeasure, double amount){
-        this.ingredientId = ingredientId;
-        this.unitOfMeasure = unitOfMeasure;
-        this.amount = amount;
-    }
-
-    public ObjectId getIngredientId() { return ingredientId; }
-    public void setIngredientId(ObjectId ingredientId) { this.ingredientId = ingredientId; }
-    public String getUnitOfMeasure() { return unitOfMeasure; }
-    public void setUnitOfMeasure(String unitOfMeasure) { this.unitOfMeasure = unitOfMeasure; }
-    public double getAmount() { return amount; }
-    public void setAmount(double amount) { this.amount = amount; }
-}
 
 
 public class Recipe {
+    private ObjectId _id;
     private String name;
     private DifficultyType difficulty;
     private double servings;
     private double prepTime;
     private double cookTime;
     private double readyInTime;
-    private List<IngredientItem> ingredients;
+    private ArrayList<IngredientItem> ingredients;
     private List<String> steps;
     private List<String> toolsNeeded;
     private String description;
@@ -54,9 +37,27 @@ public class Recipe {
     private double cholestrol;
     private Binary foodImage;
 
+    private enum DifficultyType {
+        EASY(1),
+        INTERMEDIATE(2),
+        HARD(3);
+
+        private int difficulty;
+
+        private DifficultyType(int difficulty)
+        {
+            this.difficulty = difficulty;
+        }
+
+        public int getDifficulty(){
+            return difficulty;
+        }
+    }
+
+
     public Recipe() {}
 
-    public Recipe (String name, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, List<IngredientItem> ingredients,
+    public Recipe (String name, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
                    List<String> steps, List<String> toolsNeeded, String description, String author, double calories, double protein,
                    double fat, double carbohydrate, double fiber, double sugar, double calcium, double iron, double potassium, double sodium,
                    double vitaminC, double vitAiu, double vitDiu, double cholestrol, Binary foodImage){
@@ -89,6 +90,8 @@ public class Recipe {
         setDifficulty(difficulty);
     }
 
+    public ObjectId get_id() {return _id;}
+    public void set_id(ObjectId _id) { this._id = _id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public int getDifficulty() { return difficulty.getDifficulty(); }
@@ -100,8 +103,8 @@ public class Recipe {
     public void getCookTime(double cookTime) { this.cookTime = cookTime; }
     public double getReadyInTime() { return readyInTime; }
     public void setReadyInTime(double readyInTime) { this.readyInTime = readyInTime; }
-    public List<IngredientItem> getIngredients() { return ingredients; }
-    public void setIngredients(List<IngredientItem> ingredients) {this.ingredients = ingredients; }
+    public ArrayList<IngredientItem> getIngredients() { return ingredients; }
+    public void setIngredients(ArrayList<IngredientItem> ingredients) { this.ingredients = ingredients; }
     public List<String> getSteps() { return steps; }
     public void setSteps(List<String> steps) { this.steps = steps; }
     public List<String> getToolsNeeded() { return toolsNeeded; }
@@ -151,23 +154,4 @@ public class Recipe {
             default: System.out.println("error in setDiffculty");
         }
     }
-
-    private enum DifficultyType {
-        EASY(1),
-        INTERMEDIATE(2),
-        HARD(3);
-
-        private int difficulty;
-
-        private DifficultyType(int difficulty)
-        {
-            this.difficulty = difficulty;
-        }
-
-        public int getDifficulty(){
-            return difficulty;
-        }
-    }
-
-
 }
