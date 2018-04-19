@@ -11,6 +11,7 @@ import java.util.ArrayList;
 public class Recipe {
     private ObjectId _id;
     private String name;
+    private int typeOfFood;
     private DifficultyType difficulty;
     private double servings;
     private double prepTime;
@@ -57,11 +58,12 @@ public class Recipe {
 
     public Recipe() {}
 
-    public Recipe (String name, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
+    public Recipe (String name, int typeOfFood, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
                    List<String> steps, List<String> toolsNeeded, String description, String author, double calories, double protein,
                    double fat, double carbohydrate, double fiber, double sugar, double calcium, double iron, double potassium, double sodium,
                    double vitaminC, double vitAiu, double vitDiu, double cholestrol, Binary foodImage){
         this.name = name;
+        this.typeOfFood = typeOfFood;
         this.servings = servings;
         this.prepTime = prepTime;
         this.cookTime = cookTime;
@@ -94,13 +96,15 @@ public class Recipe {
     public void set_id(ObjectId _id) { this._id = _id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
+    public int getTypeOfFood() { return typeOfFood; }
+    public void setTypeOfFood(int typeOfFood) { this.typeOfFood = typeOfFood; }
     public int getDifficulty() { return difficulty.getDifficulty(); }
     public double getServings() { return servings; }
     public void setServings(double servings) { this.servings = servings;}
     public double getPrepTime() { return prepTime; }
     public void setPrepTime(double prepTime) { this.prepTime = prepTime; }
-    public double setCookTime() { return cookTime; }
-    public void getCookTime(double cookTime) { this.cookTime = cookTime; }
+    public double getCookTime() { return cookTime; }
+    public void setCookTime(double cookTime) { this.cookTime = cookTime; }
     public double getReadyInTime() { return readyInTime; }
     public void setReadyInTime(double readyInTime) { this.readyInTime = readyInTime; }
     public ArrayList<IngredientItem> getIngredients() { return ingredients; }
