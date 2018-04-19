@@ -4,6 +4,9 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.*;
+import com.mongodb.MongoWriteException;
+import com.mongodb.MongoWriteConcernException;
+import com.mongodb.MongoException;
 import info.ieathealthy.models.Recipe;
 import io.jsonwebtoken.Jwts;
 import org.bson.codecs.configuration.CodecRegistry;
@@ -39,11 +42,13 @@ public class RecipeController {
         this._sigKey = sigKey;
     }
 
+    /*
     @RequestMapping(value="/api/recipe/{name}", method=RequestMethod.GET)
     public ResponseEntity<?> ingredient(@PathVariable String name, @RequestParam(value="token") String token){
         try {
 
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
 
             Recipe recipe = _recipeCollection.find(eq("name", name)).first();
 
@@ -59,17 +64,30 @@ public class RecipeController {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
+    */
 
     //Ambiguous paths - /api/recipe/{id} and /api/recipe/{name}
-    /*
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.GET)
     public ResponseEntity<?> getRecipeById(@PathVariable String id, @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            Recipe recipe = _recipeCollection.find(eq("_id", new ObjectId(id))).first();
+            ObjectId recipeId; //ObjectId to store the provided string id.
 
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
+
+            //If the recipe is null then there were no matching recipes with the provided id. Otherwise the
+            //recipe was found and is returned.
             if (recipe == null) {
                 return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
             } else {
@@ -82,36 +100,45 @@ public class RecipeController {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
-    */
 
 
-    //Not working!
+    //Not working! More complicated to test so leave for last.
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.PUT)
     public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="token") String token, @RequestBody Recipe editedRecipe){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            //Perform search for recipe with provided id.
-            Recipe recipeFound = _recipeCollection.find(eq("_id", new ObjectId(id))).first();
+            ObjectId recipeId; //ObjectId to store the provided string id.
 
-            //If recipe was not found then return 404 Not Found response.
-            if (recipeFound == null)
-            {
-                return new ResponseEntity<>("Error: No recipe with provided was found.", HttpStatus.NOT_FOUND);
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
             }
 
-            UpdateResult result = _recipeCollection.replaceOne(eq("_id", new ObjectId(id)), editedRecipe);
+            try {
+                //Gets the result of the update operation.
+                UpdateResult result = _recipeCollection.replaceOne(eq("_id", new ObjectId(id)), editedRecipe);
 
-            return new ResponseEntity<>("Recipe update successful.", HttpStatus.OK);
+                //If there was no exception thrown then the operation was successful. If the number of documents updated
+                //is 0 then there were no matching documents with the id provided.
+                if (result.getModifiedCount() == 0) {
+                    return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
+                } else {
+                    return new ResponseEntity<>("Successful update of recipe.", HttpStatus.OK);
+                }
 
-            /*
-            if (result.wasAcknowledged() == true){
-                return new ResponseEntity<>("Recipe update successful.", HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("Error: Recipe update unsuccessful", HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (MongoWriteException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (MongoWriteConcernException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (MongoException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
             }
-            */
 
         } catch (io.jsonwebtoken.SignatureException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
@@ -120,4 +147,47 @@ public class RecipeController {
         }
     }
 
+    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            try {
+                //Gets the result of the delete operation.
+                DeleteResult result = _recipeCollection.deleteOne(eq("_id", recipeId));
+
+                //If there was no exception thrown then the operation was successful. If the number of documents deleted
+                //is 0 then there were no matching documents with the id provided.
+                if (result.getDeletedCount() == 0) {
+                    return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
+                } else {
+                    return new ResponseEntity<>("Successful deletion of recipe.", HttpStatus.OK);
+                }
+
+            } catch (MongoWriteException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (MongoWriteConcernException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (MongoException e) {
+                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+        } catch (io.jsonwebtoken.SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
 }

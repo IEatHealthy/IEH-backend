@@ -113,6 +113,8 @@ public class Recipe {
     public void setSteps(List<String> steps) { this.steps = steps; }
     public List<String> getToolsNeeded() { return toolsNeeded; }
     public void setToolsNeeded(List<String> tooldNeeded) { this.toolsNeeded = toolsNeeded; }
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
     public String getAuthor() { return author; }
     public void setAuthor(String author) { this.author = author; }
     public double getCalories() { return calories; }
