@@ -2,6 +2,7 @@ package info.ieathealthy.restcontrollers;
 
 import info.ieathealthy.cryptoutils.JWTKeyFactory;
 import org.bson.codecs.configuration.CodecRegistry;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,12 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
+import static com.mongodb.client.model.Filters.eq;
 import info.ieathealthy.models.Ingredient;
 import java.security.Key;
-import java.security.SignatureException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
-import static com.mongodb.client.model.Filters.*;
+import io.jsonwebtoken.SignatureException;
+import io.jsonwebtoken.ExpiredJwtException;
+import java.util.ArrayList;
 
 @RestController
 public class IngredientController {
@@ -36,19 +39,84 @@ public class IngredientController {
         this._sigKey = sigKey;
     }
 
-    //need to handle errors in retrieving ingredients
-    @RequestMapping(value="/api/{token}/ingredient", method=RequestMethod.GET)
-    public ResponseEntity<?> ingredient(@RequestParam(value="name") String name, @PathVariable String token){
+    /* /api/ingredient/{name} and /api/ingredient/{id} are ambiguous
+    @RequestMapping(value="/api/ingredient/{name}", method=RequestMethod.GET)
+    public ResponseEntity<?> getIngredientByName(@PathVariable String name, @RequestParam(value="token") String token) {
         try {
-
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            Ingredient ing = _ingredientCollection.find(regex("shrtDesc", name)).first();
-            return new ResponseEntity<>(ing, HttpStatus.FOUND);
+            Ingredient ing = _ingredientCollection.find(eq("shrtDesc", name)).first();
 
-        } catch (io.jsonwebtoken.SignatureException e) {
+            //If ing is null then the ingredient was not found so return an error. Otherwise return the ingredient found.
+            if (ing == null) {
+                return new ResponseEntity<>("Error: The provided name does not match any records in the database.", HttpStatus.NOT_FOUND);
+            }
+            else {
+                return new ResponseEntity<>(ing, HttpStatus.OK);
+            }
+
+        } catch (SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+    */
+
+
+    @RequestMapping(value="/api/ingredient/{id}", method=RequestMethod.GET)
+    public ResponseEntity<?> getIngredientById(@PathVariable String id, @RequestParam(value="token") String token) {
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId ingId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                ingId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            Ingredient ing = _ingredientCollection.find(eq("_id", ingId)).first();
+
+            //If ing is null then the ingredient was not found so return an error. Otherwise return the ingredient found.
+            if (ing == null) {
+                return new ResponseEntity<>("Error: The provided name does not match any records in the database.", HttpStatus.NOT_FOUND);
+            }
+            else {
+                return new ResponseEntity<>(ing, HttpStatus.OK);
+            }
+
+        } catch (SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
 
+
+    @RequestMapping(value="/api/ingredient", method=RequestMethod.GET)
+    public ResponseEntity<?> getAllIngredients(@RequestParam(value="token") String token) {
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ArrayList<Ingredient> ings = _ingredientCollection.find().into(new ArrayList<Ingredient>());
+
+            //If ings is null then the collection is empty (very unlikely), otherwise return the entire collection.
+            if (ings == null) {
+                return new ResponseEntity<>("Error: No records in the 'ingredients' collection.", HttpStatus.NOT_FOUND);
+            }
+            else {
+                return new ResponseEntity<>(ings, HttpStatus.OK);
+            }
+
+        } catch (SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
 }

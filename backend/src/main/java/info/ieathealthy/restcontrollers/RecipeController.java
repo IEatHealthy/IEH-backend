@@ -4,11 +4,11 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.*;
-import com.mongodb.MongoWriteException;
-import com.mongodb.MongoWriteConcernException;
 import com.mongodb.MongoException;
 import info.ieathealthy.models.Recipe;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.SignatureException;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
 import org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID;
@@ -25,6 +25,7 @@ import java.security.Key;
 import java.util.Base64;
 
 import static com.mongodb.client.model.Filters.eq;
+
 
 
 @RestController
@@ -107,9 +108,7 @@ public class RecipeController {
                 return new ResponseEntity<>(recipe, HttpStatus.OK);
             }
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -135,7 +134,7 @@ public class RecipeController {
 
             try {
                 //Gets the result of the update operation.
-                UpdateResult result = _recipeCollection.replaceOne(eq("_id", new ObjectId(id)), editedRecipe);
+                UpdateResult result = _recipeCollection.replaceOne(eq("_id", recipeId), editedRecipe);
 
                 //If there was no exception thrown then the operation was successful. If the number of documents updated
                 //is 0 then there were no matching documents with the id provided.
@@ -145,17 +144,11 @@ public class RecipeController {
                     return new ResponseEntity<>("Successful update of recipe.", HttpStatus.OK);
                 }
 
-            } catch (MongoWriteException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
-            } catch (MongoWriteConcernException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
             } catch (MongoException e) {
                 return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (io.jsonwebtoken.SignatureException | io.jsonwebtoken.ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -189,17 +182,11 @@ public class RecipeController {
                     return new ResponseEntity<>("Successful deletion of recipe.", HttpStatus.OK);
                 }
 
-            } catch (MongoWriteException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
-            } catch (MongoWriteConcernException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
             } catch (MongoException e) {
                 return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -229,9 +216,7 @@ public class RecipeController {
                 return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
             }
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -281,7 +266,7 @@ public class RecipeController {
             //New Review object must be created with the _id field as recipeId.
             //Otherwise, add the new review to the list of reviews.
             if (recipeReviews == null) {
-                ArrayList<UserReview> newUserReview = new ArrayList<UserReview>();
+                ArrayList<UserReview> newUserReview = new ArrayList<>();
                 newUserReview.add(newReview);
                 Review review = new Review(recipeId, newUserReview);
                 _reviewCollection.insertOne(review);
@@ -302,9 +287,7 @@ public class RecipeController {
 
             return new ResponseEntity<>("Recipe review successful.", HttpStatus.OK);
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -355,6 +338,7 @@ public class RecipeController {
                 if (reviews.get(i).getUserId().compareTo(updatedReview.getUserId()) == 0) {
                     recipeReviews.getReviews().get(i).setUserReview(updatedReview.getUserReview());
                     _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+
                     return new ResponseEntity<>("Review has been updated successfully.", HttpStatus.OK);
                 }
             }
@@ -362,9 +346,7 @@ public class RecipeController {
             //If it gets to this point then it means that the provided userId did not match any of the userIds in the reviews.
             return new ResponseEntity<>("Error: User has yet to review recipe with provided id.", HttpStatus.NOT_FOUND);
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -375,7 +357,7 @@ public class RecipeController {
                                                     @RequestParam(value="token") String token){
 
         try {
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId; //ObjectId to store the provided string id.
             ObjectId actualUserId;
@@ -413,9 +395,7 @@ public class RecipeController {
             }
 
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
