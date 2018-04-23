@@ -73,7 +73,6 @@ public class UserController {
                         .claim("permission", "user")
                         .signWith(SignatureAlgorithm.HS512, _sigKey)
                         .compact();
-                userAccessToken += "TTTTTTTT";
                 //return with the token and the appropriate http status
                 return new ResponseEntity<>(userAccessToken, HttpStatus.FOUND);
 

@@ -11,11 +11,15 @@ import info.ieathealthy.models.Recipe;
 import io.jsonwebtoken.Jwts;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
+import org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import info.ieathealthy.models.Review;
+import info.ieathealthy.models.UserReview;
+import info.ieathealthy.models.User;
+import java.util.ArrayList;
 
 import java.security.Key;
 import java.util.Base64;
@@ -30,15 +34,24 @@ public class RecipeController {
     //used for database ops
     private final MongoClient _client;
     private final MongoDatabase _db;
+    private final MongoDatabase _dbIEH;
     private final MongoCollection<Recipe> _recipeCollection;
+    private final MongoCollection<Review> _reviewCollection;
+    private final MongoCollection<User> _userCollection;
     private final CodecRegistry _modelCodecRegistry;
     private final Key _sigKey;
+    private static final int REVIEW_WORD_COUNT_LIMIT = 150;
+    private static final int REVIEW_CHAR_COUNT_LIMIT = 1200;
+
 
     public RecipeController(@Qualifier("mongoClient") MongoClient client, @Qualifier("mongoCodecRegistry") CodecRegistry modelCodecRegistry, @Qualifier("jwtKeyFactory") Key sigKey){
         this._client = client;
         this._modelCodecRegistry = modelCodecRegistry;
         this._db = _client.getDatabase("food-data");
+        this._dbIEH = _client.getDatabase("i-eat-healthy");
         this._recipeCollection = _db.getCollection("recipes", Recipe.class).withCodecRegistry(_modelCodecRegistry);
+        this._reviewCollection = _dbIEH.getCollection("reviews", Review.class).withCodecRegistry(_modelCodecRegistry);
+        this._userCollection = _dbIEH.getCollection("users", User.class).withCodecRegistry(_modelCodecRegistry);
         this._sigKey = sigKey;
     }
 
@@ -190,4 +203,221 @@ public class RecipeController {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
+
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecipeReviewsById(@PathVariable String id, @RequestParam(value="token") String token) {
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try {
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+
+            if (recipeReviews == null) {
+                return new ResponseEntity<>("Error: No recipe reviews with provided id were found.", HttpStatus.NOT_FOUND);
+            } else {
+                return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
+            }
+
+        } catch (io.jsonwebtoken.SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.POST)
+    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestParam(value="token") String token,
+                                                 @RequestBody UserReview newReview){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            User user = _userCollection.find(eq("_id", newReview.getUserId())).first();
+            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
+            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+            int wordCount = 0; //Word count of review.
+
+            //Check how many words are in the review by counting the spaces.
+            for (int i = 0; i < newReview.getUserReview().length(); i++) {
+                if (newReview.getUserReview().charAt(i) == ' ') {
+                    wordCount++;
+                }
+            }
+
+            //Check if user and recipe exist. Also checks that the review has not exceeded the limits.
+            if (user == null) {
+                return new ResponseEntity<>("Error: No user exists with provided userId.", HttpStatus.NOT_FOUND);
+            } else if (recipe == null) {
+                return new ResponseEntity<>("Error: No recipe exists with provided id.", HttpStatus.NOT_FOUND);
+            } else if (newReview.getUserReview().length() > REVIEW_CHAR_COUNT_LIMIT) {
+                return new ResponseEntity<>("Error: Length of review has exceeded 1200 characters.", HttpStatus.BAD_REQUEST);
+            } else if (wordCount > REVIEW_WORD_COUNT_LIMIT) {
+                return new ResponseEntity<>("Error: 150 word count limit of review has been exceeded.", HttpStatus.BAD_REQUEST);
+            }
+
+            //If recipeReviews is null then there are no reviews for this specific recipe yet.
+            //New Review object must be created with the _id field as recipeId.
+            //Otherwise, add the new review to the list of reviews.
+            if (recipeReviews == null) {
+                ArrayList<UserReview> newUserReview = new ArrayList<UserReview>();
+                newUserReview.add(newReview);
+                Review review = new Review(recipeId, newUserReview);
+                _reviewCollection.insertOne(review);
+            } else {
+                ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+                for (int i = 0; i < reviews.size(); i++) {
+                    //If any of the existing reviews have matching userIds with the newReview then the
+                    //user has already written a review for the recipe.
+                    if (reviews.get(i).getUserId().compareTo(newReview.getUserId()) == 0) {
+                        return new ResponseEntity<>("Error: User has already written a review for this recipe.", HttpStatus.CONFLICT);
+                    }
+                }
+
+                recipeReviews.getReviews().add(newReview);
+                _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+            }
+
+            return new ResponseEntity<>("Recipe review successful.", HttpStatus.OK);
+
+        } catch (io.jsonwebtoken.SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.PUT)
+    public ResponseEntity<?> updateReviewById(@PathVariable String id, @RequestParam(value="token") String token,
+                                              @RequestBody UserReview updatedReview) {
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+            int wordCount = 0; //Word count of review.
+
+            //Check how many words are in the review by counting the spaces.
+            for (int i = 0; i < updatedReview.getUserReview().length(); i++) {
+                if (updatedReview.getUserReview().charAt(i) == ' ') {
+                    wordCount++;
+                }
+            }
+
+            //Also checks that the review has not exceeded the limits.
+            if (recipeReviews == null) {
+                return new ResponseEntity<>("Error: Recipe has no existing reviews.", HttpStatus.NOT_FOUND);
+            } else if (updatedReview.getUserReview().length() > REVIEW_CHAR_COUNT_LIMIT) {
+                return new ResponseEntity<>("Error: Length of review has exceeded 1200 characters.", HttpStatus.BAD_REQUEST);
+            } else if (wordCount > REVIEW_WORD_COUNT_LIMIT) {
+                return new ResponseEntity<>("Error: 150 word count limit of review has been exceeded.", HttpStatus.BAD_REQUEST);
+            }
+
+            //Get the reviews of the recipe.
+            ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+            //Iterate through the reviews until we find matching user. Then update the review.
+            for (int i = 0; i < reviews.size(); i++) {
+                //compareTo() returns 0 if the ObjectIds are equal and -1 if they are not equal.
+                if (reviews.get(i).getUserId().compareTo(updatedReview.getUserId()) == 0) {
+                    recipeReviews.getReviews().get(i).setUserReview(updatedReview.getUserReview());
+                    _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+                    return new ResponseEntity<>("Review has been updated successfully.", HttpStatus.OK);
+                }
+            }
+
+            //If it gets to this point then it means that the provided userId did not match any of the userIds in the reviews.
+            return new ResponseEntity<>("Error: User has yet to review recipe with provided id.", HttpStatus.NOT_FOUND);
+
+        } catch (io.jsonwebtoken.SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
+
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteRecipeReviewById(@PathVariable String id, @RequestParam(value="userId") String userId,
+                                                    @RequestParam(value="token") String token){
+
+        try {
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+            ObjectId actualUserId;
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+                actualUserId = new ObjectId(userId);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+
+            //If recipeReviews is null then the recipe has no reviews yet so has not written a review for the recipe.
+            if (recipeReviews == null) {
+                return new ResponseEntity<>("Error: Recipe has no existing reviews.", HttpStatus.NOT_FOUND);
+            } else {
+                ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+                //Find matching user id and delete the review associated with the user.
+                for (int i = 0; i < reviews.size(); i++) {
+                    if (reviews.get(i).getUserId().compareTo(actualUserId) == 0){
+                        recipeReviews.getReviews().remove(i);
+                        _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+
+                        return new ResponseEntity<>("Review was removed successfully.", HttpStatus.OK);
+                    }
+                }
+
+                //If it gets here then the user has not written a review for the recipe.
+                return new ResponseEntity<>("Error: User has not written a review for recipe with the provided id.", HttpStatus.NOT_FOUND);
+            }
+
+
+        } catch (io.jsonwebtoken.SignatureException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
 }

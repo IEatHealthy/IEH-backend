@@ -18,8 +18,8 @@ public class Recipe {
     private double cookTime;
     private double readyInTime;
     private ArrayList<IngredientItem> ingredients;
-    private List<String> steps;
-    private List<String> toolsNeeded;
+    private ArrayList<String> steps;
+    private ArrayList<String> toolsNeeded;
     private String description;
     private String author;
     private double calories;
@@ -59,7 +59,7 @@ public class Recipe {
     public Recipe() {}
 
     public Recipe (String name, int typeOfFood, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
-                   List<String> steps, List<String> toolsNeeded, String description, String author, double calories, double protein,
+                   ArrayList<String> steps, ArrayList<String> toolsNeeded, String description, String author, double calories, double protein,
                    double fat, double carbohydrate, double fiber, double sugar, double calcium, double iron, double potassium, double sodium,
                    double vitaminC, double vitAiu, double vitDiu, double cholestrol, Binary foodImage){
         this.name = name;
@@ -109,10 +109,10 @@ public class Recipe {
     public void setReadyInTime(double readyInTime) { this.readyInTime = readyInTime; }
     public ArrayList<IngredientItem> getIngredients() { return ingredients; }
     public void setIngredients(ArrayList<IngredientItem> ingredients) { this.ingredients = ingredients; }
-    public List<String> getSteps() { return steps; }
-    public void setSteps(List<String> steps) { this.steps = steps; }
-    public List<String> getToolsNeeded() { return toolsNeeded; }
-    public void setToolsNeeded(List<String> tooldNeeded) { this.toolsNeeded = toolsNeeded; }
+    public ArrayList<String> getSteps() { return steps; }
+    public void setSteps(ArrayList<String> steps) { this.steps = steps; }
+    public ArrayList<String> getToolsNeeded() { return toolsNeeded; }
+    public void setToolsNeeded(ArrayList<String> tooldNeeded) { this.toolsNeeded = toolsNeeded; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public String getAuthor() { return author; }
