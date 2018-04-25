@@ -19,7 +19,12 @@ import org.springframework.web.bind.annotation.*;
 import info.ieathealthy.models.Review;
 import info.ieathealthy.models.UserReview;
 import info.ieathealthy.models.User;
+import info.ieathealthy.models.UserRating;
+import info.ieathealthy.models.FrontRecipe;
+
+import info.ieathealthy.models.Rating;
 import java.util.ArrayList;
+
 
 import java.security.Key;
 import java.util.Base64;
@@ -56,9 +61,40 @@ public class RecipeController {
         this._sigKey = sigKey;
     }
 
+
+    //Some cases not accounted for yet but most of it is done.
+    @RequestMapping(value="/api/recipe", method=RequestMethod.POST)
+    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe){
+        try {
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            //At the least check these values to make sure that they're not blank.
+            if (recipe.getName() == null || recipe.getIngredients() == null || recipe.getSteps() == null || recipe.getAuthor() == null ||
+                    recipe.getServings() == 0 || recipe.getPrepTime() == 0 || recipe.getCookTime() == 0 || recipe.getReadyInTime() == 0){
+
+                return new ResponseEntity<>("Error: Submitted values blank with exception of nutritional values.", HttpStatus.BAD_REQUEST);
+            }
+
+            //Create Recipe object because otherwise we would have to create another MongoCollection
+            //with the type FrontRecipe.
+            Recipe recipeToInsert = new Recipe(recipe.getName(),recipe.getTypeOfFood(),recipe.getDifficulty(),recipe.getServings(),recipe.getPrepTime(),
+                                          recipe.getCookTime(),recipe.getReadyInTime(),recipe.getIngredients(),recipe.getSteps(),recipe.getToolsNeeded(),
+                                          recipe.getDescription(),recipe.getAuthor(),recipe.getCalories(),recipe.getProtein(),recipe.getFat(),
+                                          recipe.getCarbohydrate(),recipe.getFiber(),recipe.getSugar(),recipe.getCalcium(),recipe.getIron(),recipe.getPotassium(),
+                                          recipe.getSodium(),recipe.getVitaminC(),recipe.getVitAiu(),recipe.getVitDiu(),recipe.getCholestrol(), recipe.getFoodImage());
+
+            _recipeCollection.insertOne(recipeToInsert);
+
+            return new ResponseEntity<>("Success: Recipe was created.", HttpStatus.OK);
+
+
+        } catch (SignatureException | ExpiredJwtException  e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
     /*
     @RequestMapping(value="/api/recipe/{name}", method=RequestMethod.GET)
-    public ResponseEntity<?> ingredient(@PathVariable String name, @RequestParam(value="token") String token){
+    public ResponseEntity<?> getRecipeByName(@PathVariable String name, @RequestParam(value="token") String token){
         try {
 
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
@@ -399,5 +435,38 @@ public class RecipeController {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
+
+
+    /*Just Starting on it.
+    @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.POST)
+    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newRating){
+
+        try {
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId; //ObjectId to store the provided string id.
+
+            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
+            //if the string id is not a valid hex string representation of an ObjectId.
+            try{
+                recipeId = new ObjectId(id);
+
+            } catch (IllegalArgumentException e) {
+                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            }
+
+            User user = _userCollection.find(eq("_id", newRating.getUserId())).first();
+            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
+
+            //delete
+            return new ResponseEntity<>("hello", HttpStatus.BAD_REQUEST);
+
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+    */
 
 }

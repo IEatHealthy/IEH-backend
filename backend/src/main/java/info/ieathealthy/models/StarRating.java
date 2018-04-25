@@ -7,10 +7,10 @@ public enum StarRating {
     FOURSTAR(4),
     FIVESTAR(5);
 
-    private int rating;
+    private int starRating;
 
-    private StarRating(int rating) { this.rating = rating; }
+    private StarRating(int rating) { this.starRating= rating; }
 
-    public void setRating(int rating) { this.rating = rating; }
-    public int getRating() { return rating; }
+    public void setStarRating(int rating) { this.starRating = rating; }
+    public int getStarRating() { return starRating; }
 }
