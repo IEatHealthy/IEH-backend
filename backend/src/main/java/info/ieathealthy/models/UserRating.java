@@ -28,8 +28,7 @@ public class UserRating {
                 break;
             case 5: this.userRating = StarRating.FIVESTAR;
                 break;
-            default: System.out.println("error in setUserRating()");
+            default: this.userRating = StarRating.INVALID;
         }
-
     }
 }

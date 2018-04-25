@@ -5,7 +5,8 @@ public enum StarRating {
     TWOSTAR(2),
     THREESTAR(3),
     FOURSTAR(4),
-    FIVESTAR(5);
+    FIVESTAR(5),
+    INVALID(50);
 
     private int starRating;
 

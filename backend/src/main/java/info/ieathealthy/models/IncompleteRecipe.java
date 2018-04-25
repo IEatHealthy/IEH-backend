@@ -3,6 +3,7 @@ package info.ieathealthy.models;
 import org.bson.types.ObjectId;
 import java.util.ArrayList;
 
+//Might want to put these in a different package so that the rest of the package doesn't have access to it.
 
 
 //Contains everything except for the image. Image data must be accepted as a string
