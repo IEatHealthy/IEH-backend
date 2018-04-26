@@ -1,11 +1,9 @@
 package info.ieathealthy.restcontrollers;
 
-import com.mongodb.MongoClient;
-import com.mongodb.async.SingleResultCallback;
+import com.mongodb.*;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.*;
-import com.mongodb.MongoException;
 import info.ieathealthy.models.Recipe;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -30,7 +28,6 @@ import java.util.ArrayList;
 import java.security.Key;
 
 import static com.mongodb.client.model.Filters.eq;
-
 
 
 @RestController
@@ -77,6 +74,8 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: Submitted values blank with exception of nutritional values.", HttpStatus.BAD_REQUEST);
             }
 
+            //TODO have to insert user id into some collection to know who created the rcipe
+
             //Create Recipe object because otherwise we would have to create another MongoCollection
             //with the type FrontRecipe.
             Recipe recipeToInsert = new Recipe(recipe.getName(),recipe.getTypeOfFood(),recipe.getDifficulty(),recipe.getServings(),recipe.getPrepTime(),
@@ -89,11 +88,11 @@ public class RecipeController {
 
             return new ResponseEntity<>("Success: Recipe was created.", HttpStatus.OK);
 
-
         } catch (SignatureException | ExpiredJwtException  e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
+
     /*
     @RequestMapping(value="/api/recipe/{name}", method=RequestMethod.GET)
     public ResponseEntity<?> getRecipeByName(@PathVariable String name, @RequestParam(value="token") String token){
@@ -105,14 +104,13 @@ public class RecipeController {
             Recipe recipe = _recipeCollection.find(eq("name", name)).first();
 
             if (recipe == null) {
-                return new ResponseEntity<>("Error: No recipe with provided name was found.", HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(recipe, HttpStatus.OK);
+                return new ResponseEntity<>("Error: Recipe with provided name was not found.", HttpStatus.NOT_FOUND);
             }
 
-        } catch (io.jsonwebtoken.SignatureException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            return new ResponseEntity<>(recipe, HttpStatus.OK);
+
+
+        } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
@@ -120,169 +118,190 @@ public class RecipeController {
 
     //Ambiguous paths - /api/recipe/{id} and /api/recipe/{name}
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeById(@PathVariable String id, @RequestParam(value="token") String token){
+    public ResponseEntity<?> getRecipeById(@PathVariable String id){
 
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
-
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
-            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
+            Recipe recipe = _recipeCollection.find(eq("_id",  new ObjectId(id))).first();
 
             //If the recipe is null then there were no matching recipes with the provided id. Otherwise the
             //recipe was found and is returned.
             if (recipe == null) {
-                return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(recipe, HttpStatus.OK);
+                return new ResponseEntity<>("Error: Recipe with provided id was not found.", HttpStatus.NOT_FOUND);
             }
+
+            return new ResponseEntity<>(recipe, HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch(IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
 
-    //Just getting started.
-    /*
+    //Not done
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.PUT)
-    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="token") String token, @RequestBody Recipe editedRecipe){
+    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestBody FrontRecipe editedRecipe) {
 
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
+            ObjectId recipeId = new ObjectId(id);
+            ObjectId actualUserId = new ObjectId(userId);
 
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
+            //Check that these values are not blank or 0.
+            if (editedRecipe.getSteps() == null || editedRecipe.getIngredients() == null || editedRecipe.getAuthor() == null ||
+                    editedRecipe.getServings() == 0 || editedRecipe.getReadyInTime() == 0 || editedRecipe.getCookTime() == 0 ||
+                    editedRecipe.getPrepTime() == 0) {
 
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Error: Fields cannot be blank or 0.", HttpStatus.BAD_REQUEST);
             }
 
-            try {
-                //Gets the result of the update operation.
-                UpdateResult result = _recipeCollection.replaceOne(eq("_id", recipeId), editedRecipe);
 
-                //If there was no exception thrown then the operation was successful. If the number of documents updated
-                //is 0 then there were no matching documents with the id provided.
-                if (result.getModifiedCount() == 0) {
-                    return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
-                } else {
-                    return new ResponseEntity<>("Successful update of recipe.", HttpStatus.OK);
-                }
+            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
 
-            } catch (MongoException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+            if (recipe == null) {
+                return new ResponseEntity<>("Error: Recipe with provided id not found.", HttpStatus.NOT_FOUND);
             }
 
-        } catch (io.jsonwebtoken.SignatureException | io.jsonwebtoken.ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        }
-    }
-    */
 
-    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="token") String token){
+            //Update the old recipe with the modified one. Does not take parameters for name or image so it doesn't matter
+            //if they sent them.
+            recipe.updateRecipe(editedRecipe.getTypeOfFood(), editedRecipe.getDifficulty(), editedRecipe.getServings(), editedRecipe.getPrepTime(),
+                                   editedRecipe.getCookTime(), editedRecipe.getReadyInTime(), editedRecipe.getIngredients(), editedRecipe.getSteps(),
+                                   editedRecipe.getToolsNeeded(), editedRecipe.getDescription(), editedRecipe.getAuthor());
 
-        try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //TODO confirm that the user actually made this recipe
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
+            /* do confirmation here */
 
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
+            //If user did created this recipe then
 
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            UpdateResult result = _recipeCollection.replaceOne(eq("_id", recipeId), recipe);
+
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Recipe could not be updated.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            try {
-                //Gets the result of the delete operation.
-                DeleteResult result = _recipeCollection.deleteOne(eq("_id", recipeId));
-
-                //If there was no exception thrown then the operation was successful. If the number of documents deleted
-                //is 0 then there were no matching documents with the id provided.
-                if (result.getDeletedCount() == 0) {
-                    return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
-                } else {
-                    return new ResponseEntity<>("Successful deletion of recipe.", HttpStatus.OK);
-                }
-
-            } catch (MongoException e) {
-                return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+            return new ResponseEntity<>("Success: Recipe was updated.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
-    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.GET)
+
+    //Not done yet
+    //TODO check to make sure that the user created the recipe
+    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userdId") String userId, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            //Gets the result of the delete operation.
+            DeleteResult result = _recipeCollection.deleteOne(eq("_id", new ObjectId(id)));
+
+            //If there was no exception thrown then the operation was successful. If the number of documents deleted
+            //is 0 then there were no matching documents with the id provided.
+            if (result.getDeletedCount() == 0) {
+                return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>("Successful deletion of recipe.", HttpStatus.OK);
+
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException | IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    //Gets all the reviews of the recipe. Should be sufficient for now.
+    //Might change at a later time to only get a certain number at a time.
+    @RequestMapping(value="/api/recipe/{id}/reviews", method=RequestMethod.GET)
     public ResponseEntity<?> getRecipeReviewsById(@PathVariable String id, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
+            //Note: We can check if the provided recipe id references a recipe in the database but I don't think that's necessary.
 
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try {
-                recipeId = new ObjectId(id);
+            Review recipeReviews = _reviewCollection.find(eq("_id", new ObjectId(id))).first();
 
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
-            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
-
+            //Return an error reviews for the recipe were not found. Otherwise return the reviews.
             if (recipeReviews == null) {
-                return new ResponseEntity<>("Error: No recipe reviews with provided id were found.", HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
+                return new ResponseEntity<>("Error: No reviews with provided recipe id were found.", HttpStatus.NOT_FOUND);
             }
+
+            return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
-    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestParam(value="token") String token,
-                                                 @RequestBody UserReview newReview){
+
+    //Gets the review of a specific user.
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecipeReviewById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
+            ObjectId recipeId = new ObjectId(id);         //Convert the recipe string id to an ObjectId.
+            ObjectId actualUserId = new ObjectId(userId); //Convert the user string id to an ObjectId.
 
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
+            //Note: We can check if the provided recipe id references a recipe in the database but I don't think that's necessary.
 
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+
+            //Return an error reviews for the recipe were not found. Otherwise return the reviews.
+            if (recipeReviews == null) {
+                return new ResponseEntity<>("Error: No recipe reviews with provided id were found.", HttpStatus.NOT_FOUND);
             }
 
+            ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+            //Search for user with the provided id to find their review.
+            for (int i = 0 ; i < reviews.size(); i++) {
+
+                if (reviews.get(i).getUserId().compareTo(actualUserId) == 0) {
+                    return new ResponseEntity<>(reviews.get(i).getUserReview(), HttpStatus.OK);
+                }
+            }
+
+            return new ResponseEntity<>("Error: No review found with provided user id.", HttpStatus.NOT_FOUND);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.POST)
+    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestBody UserReview newReview, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            int wordCount = 0;                    //Word count of review.
+            ObjectId recipeId = new ObjectId(id); //Convert the string recipe id to an ObjectId.
             User user = _userCollection.find(eq("_id", newReview.getUserId())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
-            int wordCount = 0; //Word count of review.
 
             //Check how many words are in the review by counting the spaces.
             for (int i = 0; i < newReview.getUserReview().length(); i++) {
@@ -293,13 +312,13 @@ public class RecipeController {
 
             //Check if user and recipe exist. Also checks that the review has not exceeded the limits.
             if (user == null) {
-                return new ResponseEntity<>("Error: No user exists with provided userId.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Error: User with provided id does not exist.", HttpStatus.NOT_FOUND);
             } else if (recipe == null) {
-                return new ResponseEntity<>("Error: No recipe exists with provided id.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Error: Recipe with provided id does not exist.", HttpStatus.NOT_FOUND);
             } else if (newReview.getUserReview().length() > REVIEW_CHAR_COUNT_LIMIT) {
-                return new ResponseEntity<>("Error: Length of review has exceeded 1200 characters.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Error: Length of review exceeds the 1200 characters limit.", HttpStatus.BAD_REQUEST);
             } else if (wordCount > REVIEW_WORD_COUNT_LIMIT) {
-                return new ResponseEntity<>("Error: 150 word count limit of review has been exceeded.", HttpStatus.BAD_REQUEST);
+                return new ResponseEntity<>("Error: Word count of review exceeds the 150 word count limit..", HttpStatus.BAD_REQUEST);
             }
 
             //If recipeReviews is null then there are no reviews for this specific recipe yet.
@@ -310,27 +329,46 @@ public class RecipeController {
                 newUserReview.add(newReview);
                 Review review = new Review(recipeId, newUserReview);
                 _reviewCollection.insertOne(review);
-            } else {
-                ArrayList<UserReview> reviews = recipeReviews.getReviews();
-
-                for (int i = 0; i < reviews.size(); i++) {
-                    //If any of the existing reviews have matching userIds with the newReview then the
-                    //user has already written a review for the recipe.
-                    if (reviews.get(i).getUserId().compareTo(newReview.getUserId()) == 0) {
-                        return new ResponseEntity<>("Error: User has already written a review for this recipe.", HttpStatus.CONFLICT);
-                    }
-                }
-
-                recipeReviews.getReviews().add(newReview);
-                _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+                return new ResponseEntity<>("Success: Review was created.", HttpStatus.OK);
             }
 
-            return new ResponseEntity<>("Recipe review successful.", HttpStatus.OK);
+            ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+            //If any of the existing reviews have matching userIds with the newReview then the
+            //user has already written a review for the recipe so just replace it with the new one.
+            for (int i = 0; i < reviews.size(); i++) {
+
+                if (reviews.get(i).getUserId().compareTo(newReview.getUserId()) == 0) {
+                    //Update the review.
+                    reviews.get(i).setUserReview(newReview.getUserReview());
+                    UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
+
+                    if (result.getModifiedCount() == 0) {
+                        return new ResponseEntity<>("Error: Review could not be updated.", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+                    return new ResponseEntity<>("Success: Review was updated.", HttpStatus.OK);
+                }
+            }
+
+            //User has yet to rate the recipe so insert a UserReview object into the reviews.
+            recipeReviews.getReviews().add(newReview);
+            UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
+
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Review could not be created.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            return new ResponseEntity<>("Success: Review was created.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException | IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    /* was going to use this to update a review but the post endpoint can handle that.
+    keeping in case it's needed
 
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.PUT)
     public ResponseEntity<?> updateReviewById(@PathVariable String id, @RequestParam(value="token") String token,
@@ -339,18 +377,7 @@ public class RecipeController {
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
-
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
-            Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+            Review recipeReviews = _reviewCollection.find(eq("_id", new ObjectId(id))).first();
             int wordCount = 0; //Word count of review.
 
             //Check how many words are in the review by counting the spaces.
@@ -377,7 +404,7 @@ public class RecipeController {
                 //compareTo() returns 0 if the ObjectIds are equal and -1 if they are not equal.
                 if (reviews.get(i).getUserId().compareTo(updatedReview.getUserId()) == 0) {
                     recipeReviews.getReviews().get(i).setUserReview(updatedReview.getUserReview());
-                    _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
+                    _reviewCollection.findOneAndReplace(eq("_id", new ObjectId(id)), recipeReviews);
 
                     return new ResponseEntity<>("Review has been updated successfully.", HttpStatus.OK);
                 }
@@ -388,8 +415,12 @@ public class RecipeController {
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
+    */
+
 
 
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.DELETE)
@@ -399,65 +430,97 @@ public class RecipeController {
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
-            ObjectId actualUserId;
-
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-                actualUserId = new ObjectId(userId);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
+            ObjectId recipeId = new ObjectId(id);
+            ObjectId actualUserId = new ObjectId(userId);
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
 
-            //If recipeReviews is null then the recipe has no reviews yet so has not written a review for the recipe.
+            //If recipeReviews is null then the recipe has no reviews yet so user has not written a review for the recipe.
+            //Or maybe the recipe id is invalid (we can go ahead and check if the recipe exists by searching for it. that
+            //way we can provide better feedback.
             if (recipeReviews == null) {
-                return new ResponseEntity<>("Error: Recipe has no existing reviews.", HttpStatus.NOT_FOUND);
-            } else {
-                ArrayList<UserReview> reviews = recipeReviews.getReviews();
-
-                //Find matching user id and delete the review associated with the user.
-                for (int i = 0; i < reviews.size(); i++) {
-                    if (reviews.get(i).getUserId().compareTo(actualUserId) == 0){
-                        recipeReviews.getReviews().remove(i);
-                        _reviewCollection.findOneAndReplace(eq("_id", recipeId), recipeReviews);
-
-                        return new ResponseEntity<>("Review was removed successfully.", HttpStatus.OK);
-                    }
-                }
-
-                //If it gets here then the user has not written a review for the recipe.
-                return new ResponseEntity<>("Error: User has not written a review for recipe with the provided id.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Error: Recipe with provided id has no existing reviews.", HttpStatus.NOT_FOUND);
             }
 
+            ArrayList<UserReview> reviews = recipeReviews.getReviews();
+
+
+            //Find matching user id and delete the review associated with the user.
+            for (int i = 0; i < reviews.size(); i++) {
+
+                if (reviews.get(i).getUserId().compareTo(actualUserId) == 0){
+                    recipeReviews.getReviews().remove(i);
+                    UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
+
+                    if (result.getModifiedCount() == 0) {
+                        return new ResponseEntity<>("Error: Review could not be deleted.", HttpStatus.INTERNAL_SERVER_ERROR);
+                    } else if (reviews.isEmpty()) {
+                        //Delete the document to be consistent. If it has no reviews we don't want it stored in the database.
+                        _reviewCollection.deleteOne(eq("_id", recipeId));
+                    }
+
+                    return new ResponseEntity<>("Success: Review was removed.", HttpStatus.OK);
+                }
+            }
+
+            //If it gets here then the user has not written a review for the recipe.
+            return new ResponseEntity<>("Error: User has not written a review for recipe with the provided id.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
-    @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.GET)
+    //Gets a specific rating for a user.
+    @RequestMapping(value="/api/recipe/{id}/rating", method=RequestMethod.GET)
+    public ResponseEntity<?> getRatingsById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+
+            RecipeRating recipeRating = _ratingCollection.find(eq("_id", new ObjectId(id))).first();
+
+            //If we want to be more precise with the error, we can search for a recipe with the given id and
+            //if nothing is found then the recipe id is invalid. But this will probably do for now.
+
+            //If recipeRating is null then either the recipe id is bad or rating for this recipe don't exist.
+            if (recipeRating == null) {
+                return new ResponseEntity<>("Error: Either the recipe id is invalid or ratings for the recipe don't exist yet.", HttpStatus.NOT_FOUND);
+            }
+
+            ArrayList<UserRating> ratings = recipeRating.getRatings();
+            ObjectId actualUserId = new ObjectId(userId);
+
+            //Look for the rating of the user and return it if found.
+            for(int i = 0; i < ratings.size(); i++) {
+
+                if (ratings.get(i).getUserId().compareTo(actualUserId) == 0) {
+                    return new ResponseEntity<>(ratings.get(i).getUserRating(), HttpStatus.OK);
+                }
+            }
+
+            //If it gets here, then a rating with the provided user id was not found.
+            return new ResponseEntity<>("Error: Rating for the provided user id was not found.", HttpStatus.NOT_FOUND);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    //Gets both the total rating and all the ratings.
+    @RequestMapping(value="/api/recipe/{id}/ratings", method=RequestMethod.GET)
     public ResponseEntity<?> getRatingsById(@PathVariable String id, @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
-
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
-            RecipeRating recipeRating = _ratingCollection.find(eq("_id", recipeId)).first();
+            RecipeRating recipeRating = _ratingCollection.find(eq("_id", new ObjectId(id))).first();
 
             //If we want to be more precise with the error, we can search for a recipe with the given id and
             //if nothing is found then the recipe id is invalid. But this will probably do for now.
@@ -465,36 +528,27 @@ public class RecipeController {
             //If recipeRating is null then either the recipe id is bad or rating for this recipe don't exist.
             if (recipeRating == null) {
                 return new ResponseEntity<>("Error: Either the recipe id is invalid or ratings for the recipe don't exist", HttpStatus.NOT_FOUND);
-            } else {
-                return new ResponseEntity<>(recipeRating, HttpStatus.OK);
             }
+
+            return new ResponseEntity<>(recipeRating, HttpStatus.OK);
+
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
 
     @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.POST)
-    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating,
-                                            @RequestParam(value="token") String token){
+    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating, @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
+            ObjectId recipeId = new ObjectId(id);
             Boolean updatedRating = false; //Records whether the new rating is an update to a previous rating.
-
-
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
-
             User user = _userCollection.find(eq("_id", newUserRating.getUserId())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             RecipeRating recipeRating = _ratingCollection.find(eq("_id", recipeId)).first();
@@ -513,7 +567,6 @@ public class RecipeController {
             //If the recipeRating is null then the recipe has not been rated yet so we need to create
             //an element in the collection that contains the ratings of the recipe.
             if (recipeRating == null) {
-                System.out.println(recipeId);
                 ArrayList<UserRating> userRatingList = new ArrayList<>();
                 userRatingList.add(newUserRating);
                 RecipeRating newRecipeRating = new RecipeRating(recipeId, userRatingList, newUserRating.getUserRating());
@@ -521,110 +574,126 @@ public class RecipeController {
 
                 return new ResponseEntity<>("Success: Recipe was rated.", HttpStatus.OK);
 
-            } else {
-                //Total sum of the ratings.
-                double sumOfRatings = 0;
-
-                //If the user has already rated this recipe then update their rating.
-                for (UserRating u : recipeRating.getRatings()) {
-                    if(u.getUserId().compareTo(newUserRating.getUserId()) == 0) {
-                        u.setUserRating(newUserRating.getUserRating());
-                        updatedRating = true;
-                    }
-                }
-
-                //If no rating was updated then the user has not previously rated the recipe so add their rating.
-                if (!updatedRating) {
-                    recipeRating.getRatings().add(newUserRating);
-                }
-
-                //Sum the ratings.
-                for (UserRating u: recipeRating.getRatings()) {
-                    sumOfRatings += u.getUserRating();
-                }
-
-                //Set the new total rating by dividing the sum of the ratings by the number of ratings.
-                recipeRating.setTotalRating(sumOfRatings / recipeRating.getRatings().size());
-                _ratingCollection.findOneAndReplace(eq("_id", recipeId), recipeRating);
-
-                return new ResponseEntity<>("Success: Recipe was rated.", HttpStatus.OK);
             }
+
+            //Total sum of the ratings.
+            double sumOfRatings = 0;
+
+            //If the user has already rated this recipe then update their rating.
+            for (UserRating u : recipeRating.getRatings()) {
+
+                if(u.getUserId().compareTo(newUserRating.getUserId()) == 0) {
+                    u.setUserRating(newUserRating.getUserRating());
+                    updatedRating = true;
+                }
+            }
+
+            //If no rating was updated then the user has not previously rated the recipe so add their rating.
+            if (!updatedRating) {
+                recipeRating.getRatings().add(newUserRating);
+            }
+
+            //Sum the ratings.
+            for (UserRating u: recipeRating.getRatings()) {
+                sumOfRatings += u.getUserRating();
+            }
+
+            //Set the new total rating by dividing the sum of the ratings by the number of ratings.
+            recipeRating.setTotalRating(sumOfRatings / recipeRating.getRatings().size());
+            UpdateResult result = _ratingCollection.replaceOne(eq("_id", recipeId), recipeRating);
+
+            //If the number of modified documents is 0 then something went wrong.
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Could not rate recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            return new ResponseEntity<>("Success: Recipe was rated.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (IllegalArgumentException | MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRatingById(@PathVariable String id, @RequestParam(value="userId") String userId,
-                                              @RequestParam(value="token") String token){
+    public ResponseEntity<?> deleteRatingById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId recipeId; //ObjectId to store the provided string id.
-            ObjectId actualUserId; //Stores the user id.
+            ObjectId recipeId = new ObjectId(id);
+            double sumOfRatings = 0; //Sum of the ratings
 
-            //Convert the id to an ObjectId. IllegalArgumentException will be thrown
-            //if the string id is not a valid hex string representation of an ObjectId.
-            try{
-                recipeId = new ObjectId(id);
-                actualUserId = new ObjectId(userId);
-
-            } catch (IllegalArgumentException e) {
-                return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-            }
 
             RecipeRating recipeRating = _ratingCollection.find(eq("_id", recipeId)).first();
 
             //To make the error unambiguous we can check if the recipe id actually references a recipe.
             //Then we would know if the recipe id was actually valid or not.
-            //I didn't do it here but we can also search for the user and return an error if the user is not found.
+            //We can also search for the user and return an error if the user is not found.
 
             //If recipeRating is null then either the recipe id is invalid or no ratings exist for the recipe.
+            //Thus a rating cannot be deleted.
             //Otherwise, find the rating and delete it.
             if (recipeRating == null) {
-                return new ResponseEntity<>("Error: Either an invalid recipe id or recipe has not yet been rated." , HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Error: Either an invalid recipe id was provided or recipe has not yet been rated." , HttpStatus.NOT_FOUND);
+            }
+
+            ArrayList<UserRating> ratingsHolder = recipeRating.getRatings();
+
+            //Iterate through ratings to find matching user and remove their rating.
+            for (int i = 0; i < ratingsHolder.size(); i++) {
+
+                sumOfRatings += ratingsHolder.get(i).getUserRating();
+
+                if (ratingsHolder.get(i).getUserId().compareTo(new ObjectId(userId)) == 0) {
+                    System.out.println("\n\nIn here\n\n");
+                    sumOfRatings -= ratingsHolder.get(i).getUserRating();
+                    recipeRating.getRatings().remove(i);
+                    i--;
+                }
+            }
+
+            //Update the total rating. If sum is 0 then there are no more ratings and we don't want to divide by 0.
+            //If it is 0, then remove the document from the collection.
+            if (sumOfRatings != 0) {
+                recipeRating.setTotalRating(sumOfRatings / recipeRating.getRatings().size());
             } else {
-                double sumOfRatings = 0; //Sum of the ratings
-                ArrayList<UserRating> ratingsHolder = recipeRating.getRatings();
 
-                //Iterate through ratings to find matching user and remove their rating.
-                for (int i = 0; i < ratingsHolder.size(); i++) {
+                //Here were are not only removing the rating but we are also removing the document from the database because
+                //it doesn't have anymore ratings.
 
-                    sumOfRatings += ratingsHolder.get(i).getUserRating();
+                //Attempt to update the result.
+                UpdateResult result = _ratingCollection.replaceOne(eq("_id", recipeId), recipeRating);
+                System.out.println("in else: " + recipeRating.getRatings().size() + "\n\n");
 
-                    if (ratingsHolder.get(i).getUserId().compareTo(actualUserId) == 0) {
-                        sumOfRatings -= ratingsHolder.get(i).getUserRating();
-                        ratingsHolder.remove(i);
-                    }
+                //If a recipe has no ratings then remove the document from the database.
+                _ratingCollection.deleteOne(eq("_id", recipeId));
 
+                //If 0 documents were modified then something went wrong.
+                if (result.getModifiedCount() == 0 ) {
+                    return new ResponseEntity<>("Error: Could not delete rating.", HttpStatus.INTERNAL_SERVER_ERROR);
                 }
 
-                //Update the total rating. If sum is 0 then there are no more ratings and we don't want to divide by 0.
-                //If it is 0, then remove the document from the collection.
-                if (sumOfRatings != 0) {
-                    recipeRating.setTotalRating(sumOfRatings / recipeRating.getRatings().size());
-                } else {
-                    try {
-                        DeleteResult result = _ratingCollection.deleteOne(eq("_id", recipeId));
-                        return new ResponseEntity<>("Success: Rating removed.", HttpStatus.OK);
-
-                    } catch (MongoException e) {
-                        return new ResponseEntity(e, HttpStatus.INTERNAL_SERVER_ERROR);
-                    }
-
-                }
-
-                //Update element in collection.
-                _ratingCollection.findOneAndReplace(eq("_id", recipeId), recipeRating);
                 return new ResponseEntity<>("Success: Rating removed.", HttpStatus.OK);
             }
 
+            //Here we are only removing the rating from the document.
+
+            //Update element in collection.
+            UpdateResult result = _ratingCollection.replaceOne(eq("_id", recipeId), recipeRating);
+
+            //Should not execute unless something bad has happened.
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Rating could not be removed.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            return new ResponseEntity<>("Success: Rating removed.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException | IllegalArgumentException e) {
+            return new ResponseEntity(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 }

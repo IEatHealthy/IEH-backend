@@ -40,6 +40,7 @@ public class IncompleteRecipe {
     protected double cholestrol;
 
     private enum DifficultyType {
+        INVALID(-1),
         EASY(1),
         INTERMEDIATE(2),
         HARD(3);
@@ -122,7 +123,8 @@ public class IncompleteRecipe {
                 break;
             case 3: this.difficulty = DifficultyType.HARD;
                 break;
-            default: System.out.println("error in setDiffculty");
+            default: this.difficulty = DifficultyType.INVALID;
+                break;
         }
     }
 }

@@ -50,4 +50,21 @@ public class Recipe extends IncompleteRecipe {
 
     public Binary getFoodImage() { return foodImage; }
     public void setFoodImage(Binary foodImage) { this.foodImage = foodImage; }
+
+    //Function to update a recipe. Name and image of the food cannot be updated so don't take those values as parameters.
+    public void updateRecipe(int typeOfFood, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
+                             ArrayList<String> steps, ArrayList<String> toolsNeeded, String description, String author) {
+        this.typeOfFood = typeOfFood;
+        this.servings = servings;
+        this.prepTime = prepTime;
+        this.cookTime = cookTime;
+        this.readyInTime = readyInTime;
+        this.ingredients = ingredients;
+        this.steps = steps;
+        this.toolsNeeded = toolsNeeded;
+        this.description = description;
+        this.author = author;
+
+        setDifficulty(difficulty);
+    }
 }
