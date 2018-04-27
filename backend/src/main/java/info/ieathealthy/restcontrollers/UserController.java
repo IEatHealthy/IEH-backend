@@ -1,5 +1,6 @@
 package info.ieathealthy.restcontrollers;
 
+import io.jsonwebtoken.ClaimJwtException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
@@ -9,6 +10,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 import static com.mongodb.client.model.Filters.*;
+import static com.mongodb.client.model.Updates.*;
 import info.ieathealthy.models.User;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -19,6 +21,7 @@ import io.jsonwebtoken.impl.crypto.MacProvider;
 import java.security.Key;
 import java.util.Calendar;
 import java.util.Date;
+import java.security.*;
 
 @RestController
 public class UserController {
@@ -41,6 +44,7 @@ public class UserController {
     }
 
     //TODO handle all edge cases
+    //@Return: returns a JWT token on successful authentication; otherwise returns appropriate error
     @RequestMapping(value="/api/user/{email}/{password}", method=RequestMethod.GET)
     public ResponseEntity<?> getUserAccount (@PathVariable String email, @PathVariable String password){
 
@@ -78,12 +82,43 @@ public class UserController {
 
 
             } else {
-                return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
             }
         } else {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
+    }
+
+    //endpoint handles changing a password, provided the appropriate JWT is supplied.
+    @RequestMapping(value="/api/{token}/user/{email}", method=RequestMethod.POST)
+    public ResponseEntity<?> changeUserPassword(@PathVariable String email, @PathVariable String token, @RequestBody String newPassword){
+        try {
+            //Not the best way of doing it. Should really store JWT in db on creation
+            //and check to make sure that both signature keys match
+            //fancy manipulation may be able to get through this
+            Jwts.parser().setSigningKey(this._sigKey).parseClaimsJws(token).getBody().getSubject().equals(email);
+
+            try {
+                //Token has been verified so we need to hash the new password.
+                String newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+                _userCollection.updateOne(eq("email", email), set("hash", newHash));
+
+                //if we reach here with no exceptions, the password has been successfully changed
+                //and we can return 200
+                return new ResponseEntity<>(HttpStatus.OK);
+
+                //catch write exception, could be caused by a variety of things
+                //but we will default to not found, aka email does not exist
+                //in future will need to be more descriptive
+            } catch (Exception e){
+                return new ResponseEntity<>(e, HttpStatus.NOT_FOUND);
+            }
+            //catch exception with verifying signature of JWT
+        } catch (ClaimJwtException e){
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        }
     }
 
     //creates a test user account in the database
