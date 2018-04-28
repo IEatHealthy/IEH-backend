@@ -92,7 +92,7 @@ public class UserController {
     }
 
     //endpoint handles changing a password, provided the appropriate JWT is supplied.
-    @RequestMapping(value="/api/user/{email}", method=RequestMethod.POST)
+    @RequestMapping(value="/api/user/{email}", method=RequestMethod.PUT)
     public ResponseEntity<?> changeUserPassword(@PathVariable String email, @RequestParam(value = "token", required = true) String token, @RequestBody String newPassword){
         try {
             //Not the best way of doing it. Should really store JWT in db on creation
@@ -122,7 +122,7 @@ public class UserController {
         }
     }
 
-    @RequestMapping(value="/api/user/{email}", method=RequestMethod.PUT)
+    @RequestMapping(value="/api/user/{email}", method=RequestMethod.POST)
     public ResponseEntity<?> insertUser(@PathVariable("email") String email, @RequestBody ClientUser cu){
         //first check if the user is unique in the database
         User dCheck1 = _userCollection.find(eq("email", cu.getEmail())).first();
@@ -151,7 +151,7 @@ public class UserController {
 
             //create a Web Token to return
             //Use Mac for now, switch to RsaProvider in future
-//                Key key = MacProvider.generateKey();
+            //Key key = MacProvider.generateKey();
 
             //more claims should be added to token as API evolves
             //build a JWT for i-eat-healthy application
