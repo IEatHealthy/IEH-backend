@@ -1,6 +1,7 @@
 package info.ieathealthy.models;
 
 import org.bson.types.ObjectId;
+import info.ieathealthy.models.ClientUser;
 
 public class User {
     private ObjectId _id;
@@ -8,12 +9,25 @@ public class User {
     private String firstName;
     private String lastName;
     private String hash;
+    private String username;
+    private int skillLevel;
 
-    public User(String email, String firstName, String lastName, String hash) {
+    public User(String email, String firstName, String lastName, String hash, String username, int skillLevel) {
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
         this.hash = hash;
+        this.username = username;
+        this.skillLevel = skillLevel;
+    }
+
+    public User(ClientUser cu, String hash){
+        this.hash = hash;
+        this.email = cu.getEmail();
+        this.firstName = cu.getFirstName();
+        this.lastName = cu.getLastName();
+        this.username = cu.getUsername();
+        this.skillLevel = cu.getSkillLevel();
     }
 
     public User(){
@@ -60,4 +74,19 @@ public class User {
         this.hash = hash;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public int getSkillLevel() {
+        return skillLevel;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setSkillLevel(int skillLevel) {
+        this.skillLevel = skillLevel;
+    }
 }
