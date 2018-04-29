@@ -2,6 +2,7 @@ package info.ieathealthy.models;
 
 import org.bson.types.ObjectId;
 import info.ieathealthy.models.ClientUser;
+import java.util.ArrayList;
 
 public class User {
     private ObjectId _id;
@@ -11,14 +12,16 @@ public class User {
     private String hash;
     private String username;
     private int skillLevel;
+    private ArrayList<ObjectId> recipesCreated;
 
-    public User(String email, String firstName, String lastName, String hash, String username, int skillLevel) {
+    public User(String email, String firstName, String lastName, String hash, ArrayList<ObjectId> recipesCreated) {
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
         this.hash = hash;
         this.username = username;
         this.skillLevel = skillLevel;
+        this.recipesCreated = recipesCreated;
     }
 
     public User(ClientUser cu, String hash){
@@ -34,11 +37,11 @@ public class User {
         //empty 0-param constructor
     }
 
-    public ObjectId get_id() {
+    public ObjectId getId() {
         return _id;
     }
 
-    public void set_id(ObjectId _id) {
+    public void setId(ObjectId _id) {
         this._id = _id;
     }
 
@@ -89,4 +92,9 @@ public class User {
     public void setSkillLevel(int skillLevel) {
         this.skillLevel = skillLevel;
     }
+  
+    public ArrayList<ObjectId> getRecipesCreated() { return recipesCreated; }
+
+    public void setRecipesCreated(ArrayList<ObjectId> recipesCreated) { this.recipesCreated = recipesCreated; }
+
 }
