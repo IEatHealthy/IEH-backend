@@ -61,41 +61,73 @@ public class RecipeController {
     }
 
 
-    //Some cases not accounted for yet but most of it is done.
     @RequestMapping(value="/api/recipe", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            //At the least check these values to make sure that they're not blank.
-            if (recipe.getName() == null || recipe.getIngredients() == null || recipe.getSteps() == null || recipe.getAuthor() == null ||
-                    recipe.getServings() == 0 || recipe.getPrepTime() == 0 || recipe.getCookTime() == 0 || recipe.getReadyInTime() == 0){
+            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+
+            //Check that the user exists and at the least check the important values to make sure that they're not null or 0.
+            if (user == null) {
+                return new ResponseEntity<>("Error: Could not find user with provider user id", HttpStatus.NOT_FOUND);
+
+            } else if (recipe.getName() == null || recipe.getIngredients() == null || recipe.getSteps() == null || recipe.getAuthor() == null ||
+                    recipe.getServings() == 0 || recipe.getPrepTime() == 0 || recipe.getCookTime() == 0 || recipe.getReadyInTime() == 0 ||
+                    recipe.getName().length() == 0 || recipe.getAuthor().length() == 0) {
 
                 return new ResponseEntity<>("Error: Submitted values blank with exception of nutritional values.", HttpStatus.BAD_REQUEST);
             }
 
-            //TODO have to insert user id into some collection to know who created the rcipe
+            ObjectId recipeId = new ObjectId(); //_id to store with the recipe
+
+
+            //Note: It is highly unlikely that we have two equivalent id's. There is probably some better way of doing this
+            //but this is the easiest right now.
+
+            //Will return a recipe if a recipe is found with the id that was just created for the new recipe.
+            //_id's have to be unique.
+            Recipe recipeWithSameId = _recipeCollection.find(eq("_id", recipeId)).first();
+
+            //Keep creating an id until we get one that is not already taken.
+            while (recipeWithSameId != null) {
+                recipeId = new ObjectId();
+                recipeWithSameId = _recipeCollection.find(eq("_id", recipeId)).first();
+            }
 
             //Create Recipe object because otherwise we would have to create another MongoCollection
             //with the type FrontRecipe.
-            Recipe recipeToInsert = new Recipe(recipe.getName(),recipe.getTypeOfFood(),recipe.getDifficulty(),recipe.getServings(),recipe.getPrepTime(),
+            Recipe recipeToInsert = new Recipe(recipeId, recipe.getName(),recipe.getTypeOfFood(),recipe.getDifficulty(),recipe.getServings(),recipe.getPrepTime(),
                                           recipe.getCookTime(),recipe.getReadyInTime(),recipe.getIngredients(),recipe.getSteps(),recipe.getToolsNeeded(),
                                           recipe.getDescription(),recipe.getAuthor(),recipe.getCalories(),recipe.getProtein(),recipe.getFat(),
                                           recipe.getCarbohydrate(),recipe.getFiber(),recipe.getSugar(),recipe.getCalcium(),recipe.getIron(),recipe.getPotassium(),
                                           recipe.getSodium(),recipe.getVitaminC(),recipe.getVitAiu(),recipe.getVitDiu(),recipe.getCholestrol(), recipe.getFoodImage());
 
+            //Add the ObjectId of the new recipe created to the
+            user.getRecipesCreated().add(recipeId);
+
+            //Add the created recipe to the db.
             _recipeCollection.insertOne(recipeToInsert);
+
+            //Update the user data so that the newly created recipe is added to their list of created recipes.
+            UpdateResult result = _userCollection.replaceOne(eq("_id", user.getId()), user);
+
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Could not store identifier of newly created recipe in user's data.", HttpStatus.NOT_FOUND);
+            }
 
             return new ResponseEntity<>("Success: Recipe was created.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException  e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    /*
-    @RequestMapping(value="/api/recipe/{name}", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeByName(@PathVariable String name, @RequestParam(value="token") String token){
+
+    @RequestMapping(value="/api/recipe/name", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecipeByName(@RequestParam(value="name") String name, @RequestParam(value="token") String token){
         try {
 
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
@@ -109,20 +141,17 @@ public class RecipeController {
 
             return new ResponseEntity<>(recipe, HttpStatus.OK);
 
-
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
         }
     }
-    */
 
-    //Ambiguous paths - /api/recipe/{id} and /api/recipe/{name}
-    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeById(@PathVariable String id){
+
+    @RequestMapping(value="/api/recipe/id", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id, @RequestParam(value="token") String token){
 
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             Recipe recipe = _recipeCollection.find(eq("_id",  new ObjectId(id))).first();
 
@@ -135,91 +164,107 @@ public class RecipeController {
             return new ResponseEntity<>(recipe, HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch(IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
 
-    //Not done
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.PUT)
-    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestBody FrontRecipe editedRecipe) {
-
-        try {
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
-
-            ObjectId recipeId = new ObjectId(id);
-            ObjectId actualUserId = new ObjectId(userId);
-
-            //Check that these values are not blank or 0.
-            if (editedRecipe.getSteps() == null || editedRecipe.getIngredients() == null || editedRecipe.getAuthor() == null ||
-                    editedRecipe.getServings() == 0 || editedRecipe.getReadyInTime() == 0 || editedRecipe.getCookTime() == 0 ||
-                    editedRecipe.getPrepTime() == 0) {
-
-                return new ResponseEntity<>("Error: Fields cannot be blank or 0.", HttpStatus.BAD_REQUEST);
-            }
-
-
-            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
-
-            if (recipe == null) {
-                return new ResponseEntity<>("Error: Recipe with provided id not found.", HttpStatus.NOT_FOUND);
-            }
-
-
-            //Update the old recipe with the modified one. Does not take parameters for name or image so it doesn't matter
-            //if they sent them.
-            recipe.updateRecipe(editedRecipe.getTypeOfFood(), editedRecipe.getDifficulty(), editedRecipe.getServings(), editedRecipe.getPrepTime(),
-                                   editedRecipe.getCookTime(), editedRecipe.getReadyInTime(), editedRecipe.getIngredients(), editedRecipe.getSteps(),
-                                   editedRecipe.getToolsNeeded(), editedRecipe.getDescription(), editedRecipe.getAuthor());
-
-            //TODO confirm that the user actually made this recipe
-
-            /* do confirmation here */
-
-            //If user did created this recipe then
-
-            UpdateResult result = _recipeCollection.replaceOne(eq("_id", recipeId), recipe);
-
-            if (result.getModifiedCount() == 0) {
-                return new ResponseEntity<>("Error: Recipe could not be updated.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-
-            return new ResponseEntity<>("Success: Recipe was updated.", HttpStatus.OK);
-
-        } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (MongoException e) {
-            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
-        }
-    }
-
-
-    //Not done yet
-    //TODO check to make sure that the user created the recipe
-    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userdId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId,
+                                              @RequestBody FrontRecipe editedRecipe, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            //Gets the result of the delete operation.
-            DeleteResult result = _recipeCollection.deleteOne(eq("_id", new ObjectId(id)));
+            ObjectId recipeId = new ObjectId(id);
+            ObjectId actualUserId = new ObjectId(userId);
+            User user = _userCollection.find(eq("_id", actualUserId)).first();
+            Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
+            ArrayList<ObjectId> recipesCreated = user.getRecipesCreated();
 
-            //If there was no exception thrown then the operation was successful. If the number of documents deleted
-            //is 0 then there were no matching documents with the id provided.
-            if (result.getDeletedCount() == 0) {
-                return new ResponseEntity<>("Error: No recipe with provided id was found.", HttpStatus.NOT_FOUND);
+            //Check that these values are not blank or 0.
+            if (recipe == null) {
+                return new ResponseEntity<>("Error: Recipe with provided id not found.", HttpStatus.NOT_FOUND);
+
+            } else if (user == null) {
+                return new ResponseEntity<>("Error: User with provided id not found.", HttpStatus.NOT_FOUND);
+
+            } else if (editedRecipe.getSteps() == null || editedRecipe.getIngredients() == null || editedRecipe.getAuthor() == null ||
+                       editedRecipe.getServings() == 0 || editedRecipe.getReadyInTime() == 0 || editedRecipe.getCookTime() == 0 ||
+                       editedRecipe.getPrepTime() == 0) {
+
+                return new ResponseEntity<>("Error: Fields cannot be blank or 0.", HttpStatus.BAD_REQUEST);
             }
 
-            return new ResponseEntity<>("Successful deletion of recipe.", HttpStatus.OK);
+            //Search through the identifiers of the recipes that the user has created. If one of them matches the
+            //provided recipe id then the user actually created this recipe so they are allowed to modify it.
+            for (int i = 0; i < recipesCreated.size(); i++) {
 
+                if (recipesCreated.get(i).compareTo(recipeId) == 0) {
+                    //Update the recipe data. Does not take parameters for name or image because they can't be modified.
+                    recipe.updateRecipe(editedRecipe.getTypeOfFood(), editedRecipe.getDifficulty(), editedRecipe.getServings(), editedRecipe.getPrepTime(),
+                            editedRecipe.getCookTime(), editedRecipe.getReadyInTime(), editedRecipe.getIngredients(), editedRecipe.getSteps(),
+                            editedRecipe.getToolsNeeded(), editedRecipe.getDescription(), editedRecipe.getAuthor());
+
+                    UpdateResult result = _recipeCollection.replaceOne(eq("_id", recipeId), recipe);
+
+                    if (result.getModifiedCount() == 0) {
+                        return new ResponseEntity<>("Error: Recipe could not be updated.", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+
+                    return new ResponseEntity<>("Success: Recipe was updated.", HttpStatus.OK);
+                }
+            }
+
+            return new ResponseEntity<>("Error: User did not create this recipe.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        } catch (MongoException | IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId recipeId = new ObjectId(id);
+
+            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            ArrayList<ObjectId> recipesCreated = user.getRecipesCreated();
+
+
+            //Iterates through the array of recipe identifiers of the recipes that the user created to check if the recipeId
+            //provided matches one of the recipe identifiers. If there is a match with one of them then they created it so
+            //we go ahead with the delete operation.
+            for (int i = 0; i < recipesCreated.size(); i++) {
+
+                if (recipesCreated.get(i).compareTo(recipeId) == 0) {
+                    //Gets the result of the delete operation.
+                    DeleteResult result = _recipeCollection.deleteOne(eq("_id", recipeId));
+
+                    //If there was no exception thrown then the operation was successful. If the number of documents deleted
+                    //is 0 then there were no matching documents with the id provided.
+                    if (result.getDeletedCount() == 0) {
+                        return new ResponseEntity<>("Error: Could not delete recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+
+                    return new ResponseEntity<>("Success: Recipe was deleted.", HttpStatus.OK);
+                }
+            }
+
+            //If it gets here, no matching recipeId was found in the recipesCreated array of the user. Thus the did
+            //not create the recipe.
+            return new ResponseEntity<>("Error: User with provided id did not create recipe.", HttpStatus.NOT_FOUND);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (MongoException | IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -246,7 +291,7 @@ public class RecipeController {
             return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
@@ -285,7 +330,7 @@ public class RecipeController {
             return new ResponseEntity<>("Error: No review found with provided user id.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
@@ -361,7 +406,7 @@ public class RecipeController {
             return new ResponseEntity<>("Success: Review was created.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (MongoException | IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -466,11 +511,9 @@ public class RecipeController {
             return new ResponseEntity<>("Error: User has not written a review for recipe with the provided id.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
-        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        } catch (MongoException | IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
-        } catch (IllegalArgumentException e) {
-            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -507,7 +550,7 @@ public class RecipeController {
             return new ResponseEntity<>("Error: Rating for the provided user id was not found.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
@@ -534,7 +577,7 @@ public class RecipeController {
 
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
@@ -610,7 +653,7 @@ public class RecipeController {
             return new ResponseEntity<>("Success: Recipe was rated.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (IllegalArgumentException | MongoException e) {
             return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
         }
@@ -691,7 +734,7 @@ public class RecipeController {
             return new ResponseEntity<>("Success: Rating removed.", HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
-            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
         } catch (MongoException | IllegalArgumentException e) {
             return new ResponseEntity(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }

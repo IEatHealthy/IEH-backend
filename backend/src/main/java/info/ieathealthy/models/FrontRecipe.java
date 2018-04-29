@@ -2,6 +2,8 @@ package info.ieathealthy.models;
 import org.bson.types.Binary;
 import java.util.ArrayList;
 import java.util.Base64;
+import javax.xml.bind.DatatypeConverter;
+
 
 
 //This class takes a recipe from the front end. Specifically used to create a recipe.
@@ -53,5 +55,6 @@ public class FrontRecipe extends IncompleteRecipe {
     //Image data should be passed as a base64string. That is then decoded into a byte[] to create Binary value.
     //If passed as anything else, the Binary data will still be valid but will be inconsistent with
     //how other images are being stored.
-    public void setFoodImage(String foodImage) { this.foodImage = new Binary(Base64.getDecoder().decode(foodImage.getBytes())); }
+    //public void setFoodImage(String foodImage) { this.foodImage = new Binary(Base64.getDecoder().decode(foodImage.getBytes())); }
+    public void setFoodImage(String foodImage) { this.foodImage = new Binary(DatatypeConverter.parseBase64Binary(foodImage)); }
 }

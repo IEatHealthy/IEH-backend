@@ -1,5 +1,6 @@
 package info.ieathealthy.models;
 import org.bson.types.Binary;
+import org.bson.types.ObjectId;
 import java.util.ArrayList;
 
 
@@ -13,10 +14,13 @@ public class Recipe extends IncompleteRecipe {
 
     public Recipe() {}
 
-    public Recipe (String name, int typeOfFood, int difficulty, double servings, double prepTime, double cookTime, double readyInTime, ArrayList<IngredientItem> ingredients,
-                   ArrayList<String> steps, ArrayList<String> toolsNeeded, String description, String author, double calories, double protein,
-                   double fat, double carbohydrate, double fiber, double sugar, double calcium, double iron, double potassium, double sodium,
-                   double vitaminC, double vitAiu, double vitDiu, double cholestrol, Binary foodImage){
+    public Recipe (ObjectId _id, String name, int typeOfFood, int difficulty, double servings, double prepTime, double cookTime,
+                   double readyInTime, ArrayList<IngredientItem> ingredients, ArrayList<String> steps, ArrayList<String> toolsNeeded,
+                   String description, String author, double calories, double protein, double fat, double carbohydrate,
+                   double fiber, double sugar, double calcium, double iron, double potassium, double sodium, double vitaminC,
+                   double vitAiu, double vitDiu, double cholestrol, Binary foodImage){
+
+        this._id = _id;
         this.name = name;
         this.typeOfFood = typeOfFood;
         this.servings = servings;
