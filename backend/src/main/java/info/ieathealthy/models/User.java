@@ -1,6 +1,7 @@
 package info.ieathealthy.models;
 
 import org.bson.types.ObjectId;
+import info.ieathealthy.models.ClientUser;
 import java.util.ArrayList;
 
 public class User {
@@ -9,6 +10,8 @@ public class User {
     private String firstName;
     private String lastName;
     private String hash;
+    private String username;
+    private int skillLevel;
     private ArrayList<ObjectId> recipesCreated;
 
     public User(String email, String firstName, String lastName, String hash, ArrayList<ObjectId> recipesCreated) {
@@ -16,7 +19,18 @@ public class User {
         this.firstName = firstName;
         this.lastName = lastName;
         this.hash = hash;
+        this.username = username;
+        this.skillLevel = skillLevel;
         this.recipesCreated = recipesCreated;
+    }
+
+    public User(ClientUser cu, String hash){
+        this.hash = hash;
+        this.email = cu.getEmail();
+        this.firstName = cu.getFirstName();
+        this.lastName = cu.getLastName();
+        this.username = cu.getUsername();
+        this.skillLevel = cu.getSkillLevel();
     }
 
     public User(){
@@ -63,6 +77,22 @@ public class User {
         this.hash = hash;
     }
 
+    public String getUsername() {
+        return username;
+    }
+
+    public int getSkillLevel() {
+        return skillLevel;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setSkillLevel(int skillLevel) {
+        this.skillLevel = skillLevel;
+    }
+  
     public ArrayList<ObjectId> getRecipesCreated() { return recipesCreated; }
 
     public void setRecipesCreated(ArrayList<ObjectId> recipesCreated) { this.recipesCreated = recipesCreated; }
