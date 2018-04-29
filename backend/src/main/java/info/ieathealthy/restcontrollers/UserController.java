@@ -1,6 +1,7 @@
 package info.ieathealthy.restcontrollers;
 
 import info.ieathealthy.models.ClientUser;
+import info.ieathealthy.models.ProtectedUser;
 import io.jsonwebtoken.ClaimJwtException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -168,6 +169,59 @@ public class UserController {
         }
     }
 
+    @RequestMapping(value="/api/user/{username}", method=RequestMethod.GET)
+    public ResponseEntity<?> getUserInfo(@PathVariable String username, @RequestParam(value= "token") String token){
+        //first check signing key
+        String email = null;
+        try {
+            email = Jwts.parser().setSigningKey(this._sigKey).parseClaimsJws(token).getBody().getSubject();
+        } catch(ClaimJwtException e){
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        }
+
+        //next check if user still has an account
+        User valid = _userCollection.find(eq("email", email)).first();
+        if(valid == null){
+            return new ResponseEntity<>("Token is not valid.", HttpStatus.UNAUTHORIZED);
+        }
+
+        //if we got this far, we can now try to fetch the user they are looking for
+        User toReturn = null;
+        try {
+            toReturn = _userCollection.find(eq("username", username)).first();
+        } catch(Exception e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+
+        if(toReturn == null){
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } else {
+            //convert object to safe version that can be returned to client
+            return new ResponseEntity<>(new ProtectedUser(toReturn), HttpStatus.OK);
+        }
+    }
+
+    @RequestMapping(value="/api/user/{email}/{password}", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteUser(@PathVariable String email, @PathVariable String password){
+        //first find the account
+        try {
+            User userInfo = _userCollection.find(eq("email", email)).first();
+            if (userInfo == null) {
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            }
+
+            boolean authorized = BCrypt.checkpw(password, userInfo.getHash());
+            if (authorized) {
+                _userCollection.deleteOne(eq("email", email));
+                return new ResponseEntity<>(HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+        } catch(Exception e){
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
     //creates a test user account in the database
 //    @RequestMapping(value="/user", method=RequestMethod.POST)
 //    public ResponseEntity<?> createTestUserAccount(){
