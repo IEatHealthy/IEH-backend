@@ -128,7 +128,7 @@ public class UserController {
         User dCheck1 = _userCollection.find(eq("email", cu.getEmail())).first();
         User dCheck2 = _userCollection.find(eq("username", cu.getUsername())).first();
 
-        if(dCheck1 == null && dCheck2 == null){
+        if(dCheck1 != null || dCheck2 != null){
             return new ResponseEntity<>("Email/username already exists.", HttpStatus.CONFLICT);
         } else {
             //now generate password hash, create User, and submit
