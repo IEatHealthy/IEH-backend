@@ -13,6 +13,7 @@ public class User {
     private String username;
     private int skillLevel;
     private ArrayList<ObjectId> recipesCreated;
+    private ArrayList<ObjectId> bookmarkedRecipes;
     private ArrayList<ObjectId> badgesEarned;
     private ArrayList<ObjectId> titlesEarned;
     private ObjectId badgeSelected;
@@ -132,4 +133,8 @@ public class User {
     public void setTitleSelected(ObjectId titleSelected) {
         this.titleSelected = titleSelected;
     }
+
+    public ArrayList<ObjectId> getBookmarkedRecipes() { return bookmarkedRecipes; }
+
+    public void setBookmarkedRecipes(ArrayList<ObjectId> bookmarkedRecipes) { this.bookmarkedRecipes = bookmarkedRecipes; }
 }

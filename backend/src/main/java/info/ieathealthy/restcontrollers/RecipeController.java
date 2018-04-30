@@ -66,9 +66,9 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId){
+    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
         try {
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
 
@@ -141,7 +141,6 @@ public class RecipeController {
     @RequestMapping(value="/api/recipe/name", method=RequestMethod.GET)
     public ResponseEntity<?> getRecipeByName(@RequestParam(value="name") String name, @RequestParam(value="token") String token){
         try {
-
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
 
@@ -241,11 +240,10 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId){
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
 
         try {
-            // @RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
 
@@ -754,10 +752,9 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/{search}", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeBySearch(@PathVariable(value="search") String search){
+    public ResponseEntity<?> getRecipeBySearch(@PathVariable(value="search") String search, @RequestParam(value="token") String token){
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             //List to store the matching recipes.
             ArrayList<Recipe> matchingRecipes = new ArrayList<>();
@@ -767,9 +764,6 @@ public class RecipeController {
 
             //Puts the recipes found into the ArrayList so they can be returned.
             for (Recipe rec: recipesFound) {
-
-                System.out.println(rec.getName());
-
                 matchingRecipes.add(rec);
             }
 
@@ -788,10 +782,9 @@ public class RecipeController {
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
     @RequestMapping(value="/api/recipe/recommended", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecommendedRecipes(@RequestParam(value="userId") String userId){
+    public ResponseEntity<?> getRecommendedRecipes(@RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
             ArrayList<Recipe> recipesToReturn = new ArrayList<>();
@@ -805,9 +798,6 @@ public class RecipeController {
 
             //Puts the recipes found into the ArrayList so they can be returned.
             for (Recipe rec: recipesFound) {
-
-                System.out.println(rec.getName());
-
                 recipesToReturn.add(rec);
             }
 
@@ -826,14 +816,10 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.POST)
-    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId){
+    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-
-            System.out.println(recipeId);
-            System.out.println(userId);
             ObjectId actualRecipeId = new ObjectId(recipeId);
 
             Recipe recipe = _recipeCollection.find(eq("_id", actualRecipeId)).first();
@@ -879,10 +865,9 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId){
+    public ResponseEntity<?> deleteBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId actualUserId = new ObjectId(userId);
             ObjectId actualRecipeId = new ObjectId(recipeId);
