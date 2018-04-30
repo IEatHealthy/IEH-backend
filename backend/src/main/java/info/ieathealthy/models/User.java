@@ -13,6 +13,10 @@ public class User {
     private String username;
     private int skillLevel;
     private ArrayList<ObjectId> recipesCreated;
+    private ArrayList<ObjectId> badgesEarned;
+    private ArrayList<ObjectId> titlesEarned;
+    private ObjectId badgeSelected;
+    private ObjectId titleSelected;
 
     public User(String email, String firstName, String lastName, String hash, ArrayList<ObjectId> recipesCreated) {
         this.email = email;
@@ -97,4 +101,35 @@ public class User {
 
     public void setRecipesCreated(ArrayList<ObjectId> recipesCreated) { this.recipesCreated = recipesCreated; }
 
+    public ArrayList<ObjectId> getBadgesEarned() {
+        return badgesEarned;
+    }
+
+    public void setBadgesEarned(ArrayList<ObjectId> badgesEarned) {
+        this.badgesEarned = badgesEarned;
+    }
+
+    public ArrayList<ObjectId> getTitlesEarned() {
+        return titlesEarned;
+    }
+
+    public void setTitlesEarned(ArrayList<ObjectId> titlesEarned) {
+        this.titlesEarned = titlesEarned;
+    }
+
+    public ObjectId getBadgeSelected() {
+        return badgeSelected;
+    }
+
+    public void setBadgeSelected(ObjectId badgeSelected) {
+        this.badgeSelected = badgeSelected;
+    }
+
+    public ObjectId getTitleSelected() {
+        return titleSelected;
+    }
+
+    public void setTitleSelected(ObjectId titleSelected) {
+        this.titleSelected = titleSelected;
+    }
 }

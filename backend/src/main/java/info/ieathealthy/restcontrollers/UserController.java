@@ -2,6 +2,9 @@ package info.ieathealthy.restcontrollers;
 
 import info.ieathealthy.models.ClientUser;
 import info.ieathealthy.models.ProtectedUser;
+import info.ieathealthy.models.Badge;
+import info.ieathealthy.models.Title;
+import info.ieathealthy.models.FullyPopulatedUser;
 import io.jsonwebtoken.ClaimJwtException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -15,6 +18,7 @@ import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.*;
 import info.ieathealthy.models.User;
 import org.mindrot.jbcrypt.BCrypt;
+import org.bson.types.ObjectId;
 
 //JWT imports
 import io.jsonwebtoken.Jwts;
@@ -24,6 +28,7 @@ import java.security.Key;
 import java.util.Calendar;
 import java.util.Date;
 import java.security.*;
+import java.util.ArrayList;
 
 @RestController
 public class UserController {
@@ -33,6 +38,8 @@ public class UserController {
     private final CodecRegistry _userCodec;
     private final MongoDatabase _userDb;
     private final MongoCollection<User> _userCollection;
+    private final MongoCollection<Badge> _badgeCollection;
+    private final MongoCollection<Title> _titleCollection;
     private final Key _sigKey;
 //    private final Key jwtKey;
 
@@ -42,6 +49,8 @@ public class UserController {
         this._userCodec = registry;
         this._userDb = client.getDatabase("i-eat-healthy");
         this._userCollection = this._userDb.getCollection("users", User.class).withCodecRegistry(registry);
+        this._badgeCollection = this._userDb.getCollection("badges", Badge.class).withCodecRegistry(registry);
+        this._titleCollection = this._userDb.getCollection("titles", Title.class).withCodecRegistry(registry);
         this._sigKey = sigKey;
     }
 
@@ -221,6 +230,72 @@ public class UserController {
         } catch(Exception e){
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+
+    //endpoint returns user data to account owner for the client application
+    @RequestMapping(value="/api/user/accountOwner/{email}", method=RequestMethod.GET)
+    public ResponseEntity<?> getAccountOwnerUserData(@PathVariable String email, @RequestParam(value="token") String token){
+        //first verify the token
+        try {
+            Jwts.parser().setSigningKey(this._sigKey).parseClaimsJws(token).getBody().getSubject().equals(email);
+            User user = _userCollection.find(eq("email", email)).first();
+
+            if(user == null){
+                return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            } else {
+                try {
+                    //create the fully populated user to return to client
+                    //some fields are references so we must retrieve them before returning
+                    FullyPopulatedUser toReturn = new FullyPopulatedUser(user);
+                    toReturn.setBadgesEarned(getBadges(user.getBadgesEarned()));
+                    toReturn.setTitlesEarned(getTitles(user.getTitlesEarned()));
+                    toReturn.setBadgeSelected(getBadgeSet(user.getBadgeSelected()));
+                    toReturn.setTitleSelected(getTitleSet(user.getTitleSelected()));
+
+                    return new ResponseEntity<>(toReturn, HttpStatus.OK);
+                } catch(Exception e){
+                    return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+                }
+            }
+        } catch(ClaimJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        }
+
+    }
+
+    private ArrayList<Badge> getBadges(ArrayList<ObjectId> badgeIds){
+        ArrayList<Badge> badgesFound = new ArrayList<Badge>();
+        for(ObjectId badgeId: badgeIds){
+            Badge toInsert = null;
+            toInsert = _badgeCollection.find(eq("_id", badgeId)).first();
+            if(toInsert != null){
+                badgesFound.add(toInsert);
+            }
+        }
+
+        return badgesFound;
+    }
+
+    private ArrayList<Title> getTitles(ArrayList<ObjectId> titleIds){
+        ArrayList<Title> titlesFound = new ArrayList<Title>();
+        for(ObjectId titleId: titleIds){
+            Title toInsert = null;
+            toInsert = _titleCollection.find(eq("_id", titleId)).first();
+            if(toInsert != null){
+                titlesFound.add(toInsert);
+            }
+        }
+
+        return titlesFound;
+    }
+
+    private Badge getBadgeSet(ObjectId badgeId){
+        return _badgeCollection.find(eq("_id", badgeId)).first();
+    }
+
+    private Title getTitleSet(ObjectId titleId){
+        return _titleCollection.find(eq("_id", titleId)).first();
     }
     //creates a test user account in the database
 //    @RequestMapping(value="/user", method=RequestMethod.POST)
