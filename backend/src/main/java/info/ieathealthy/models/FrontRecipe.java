@@ -56,5 +56,9 @@ public class FrontRecipe extends IncompleteRecipe {
     //If passed as anything else, the Binary data will still be valid but will be inconsistent with
     //how other images are being stored.
     //public void setFoodImage(String foodImage) { this.foodImage = new Binary(Base64.getDecoder().decode(foodImage.getBytes())); }
-    public void setFoodImage(String foodImage) { this.foodImage = new Binary(DatatypeConverter.parseBase64Binary(foodImage)); }
+    public void setFoodImage(String foodImage) {
+        if (foodImage != null) {
+            this.foodImage = new Binary(DatatypeConverter.parseBase64Binary(foodImage));
+        }
+    }
 }

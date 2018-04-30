@@ -4,6 +4,9 @@ import com.mongodb.*;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.result.*;
+import com.mongodb.client.FindIterable;
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Filters.regex;
 import info.ieathealthy.models.Recipe;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -11,6 +14,7 @@ import io.jsonwebtoken.SignatureException;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,12 +26,12 @@ import info.ieathealthy.models.FrontRecipe;
 import info.ieathealthy.models.StarRating;
 import info.ieathealthy.models.RecipeRating;
 
+
 import java.util.ArrayList;
 
 
 import java.security.Key;
 
-import static com.mongodb.client.model.Filters.eq;
 
 
 @RestController
@@ -62,9 +66,9 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId){
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
 
@@ -74,7 +78,7 @@ public class RecipeController {
 
             } else if (recipe.getName() == null || recipe.getIngredients() == null || recipe.getSteps() == null || recipe.getAuthor() == null ||
                     recipe.getServings() == 0 || recipe.getPrepTime() == 0 || recipe.getCookTime() == 0 || recipe.getReadyInTime() == 0 ||
-                    recipe.getName().length() == 0 || recipe.getAuthor().length() == 0) {
+                    recipe.getName().length() == 0 || recipe.getAuthor().length() == 0 || recipe.getFoodImage() == null){
 
                 return new ResponseEntity<>("Error: Submitted values blank with exception of nutritional values.", HttpStatus.BAD_REQUEST);
             }
@@ -95,6 +99,9 @@ public class RecipeController {
                 recipeWithSameId = _recipeCollection.find(eq("_id", recipeId)).first();
             }
 
+
+            //TODO we'll somehow have to get the ingredient ids of the ingredients recipes. We'll probably have to do that manually
+
             //Create Recipe object because otherwise we would have to create another MongoCollection
             //with the type FrontRecipe.
             Recipe recipeToInsert = new Recipe(recipeId, recipe.getName(),recipe.getTypeOfFood(),recipe.getDifficulty(),recipe.getServings(),recipe.getPrepTime(),
@@ -104,6 +111,11 @@ public class RecipeController {
                                           recipe.getSodium(),recipe.getVitaminC(),recipe.getVitAiu(),recipe.getVitDiu(),recipe.getCholestrol(), recipe.getFoodImage());
 
             //Add the ObjectId of the new recipe created to the
+
+            if (user.getRecipesCreated() == null) {
+                user.setRecipesCreated(new ArrayList<ObjectId>());
+            }
+
             user.getRecipesCreated().add(recipeId);
 
             //Add the created recipe to the db.
@@ -229,10 +241,11 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId){
 
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            // @RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
 
@@ -739,4 +752,181 @@ public class RecipeController {
             return new ResponseEntity(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @RequestMapping(value="/api/recipe/{search}", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecipeBySearch(@PathVariable(value="search") String search){
+        try {
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            //List to store the matching recipes.
+            ArrayList<Recipe> matchingRecipes = new ArrayList<>();
+
+            //Simple search that searches a recipe name for whatever the user is searching for.
+            FindIterable<Recipe> recipesFound = _recipeCollection.find(regex("name", search, "i"));
+
+            //Puts the recipes found into the ArrayList so they can be returned.
+            for (Recipe rec: recipesFound) {
+
+                System.out.println(rec.getName());
+
+                matchingRecipes.add(rec);
+            }
+
+            if (matchingRecipes.size() != 0) {
+                return new ResponseEntity<>(matchingRecipes, HttpStatus.OK);
+            }
+
+            return new ResponseEntity<>("Error: Could not find recipes matching input.", HttpStatus.NOT_FOUND);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
+    //Used to display 20 recipes that the user can see. They are like featured/recommended recipes. The recipes displayed
+    //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
+    //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
+    @RequestMapping(value="/api/recipe/recommended", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecommendedRecipes(@RequestParam(value="userId") String userId){
+        try {
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            ArrayList<Recipe> recipesToReturn = new ArrayList<>();
+
+            if (user == null) {
+                return new ResponseEntity<>("Error: User not found.", HttpStatus.NOT_FOUND);
+            }
+
+            //Search for recipes based on their skill level and only get the first 20.
+            FindIterable<Recipe> recipesFound = _recipeCollection.find(eq("difficulty", user.getSkillLevel())).limit(20);
+
+            //Puts the recipes found into the ArrayList so they can be returned.
+            for (Recipe rec: recipesFound) {
+
+                System.out.println(rec.getName());
+
+                recipesToReturn.add(rec);
+            }
+
+            //Shouldn't happen.
+            if (recipesToReturn.size() == 0) {
+                return new ResponseEntity<>("Error: No recipes found for some reason.", HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>(recipesToReturn, HttpStatus.OK);
+
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        }
+    }
+
+
+    @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.POST)
+    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId){
+        try {
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+
+            System.out.println(recipeId);
+            System.out.println(userId);
+            ObjectId actualRecipeId = new ObjectId(recipeId);
+
+            Recipe recipe = _recipeCollection.find(eq("_id", actualRecipeId)).first();
+            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+
+            if (recipe == null) {
+                return new ResponseEntity<>("Error: Recipe with provided id does not exist.", HttpStatus.NOT_FOUND);
+
+            } else if (user == null) {
+                return new ResponseEntity<>("Error: User with provided id does not exist.", HttpStatus.NOT_FOUND);
+            }
+
+            ArrayList<ObjectId> bookmarkedRecipes = user.getBookmarkedRecipes();
+
+            if (bookmarkedRecipes == null) {
+                bookmarkedRecipes = new ArrayList<ObjectId>();
+            }
+
+            //Make sure that user has not already bookmarked recipe.
+            for (int i = 0; i < bookmarkedRecipes.size(); i++) {
+
+                if (bookmarkedRecipes.get(i).compareTo(actualRecipeId) == 0) {
+                    return new ResponseEntity<>("Error: User has already bookmarked recipe.", HttpStatus.CONFLICT);
+                }
+            }
+
+            bookmarkedRecipes.add(actualRecipeId);
+            user.setBookmarkedRecipes(bookmarkedRecipes);
+
+            UpdateResult result = _userCollection.replaceOne(eq("_id", new ObjectId(userId)), user);
+
+            if (result.getModifiedCount() == 0) {
+                return new ResponseEntity<>("Error: Could not add bookmark.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+            return new ResponseEntity<>("Success: Bookmark was added.", HttpStatus.OK);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.DELETE)
+    public ResponseEntity<?> deleteBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId){
+        try {
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ObjectId actualUserId = new ObjectId(userId);
+            ObjectId actualRecipeId = new ObjectId(recipeId);
+
+            User user = _userCollection.find(eq("_id", actualUserId)).first();
+            ArrayList<ObjectId> bookmarkedRecipes = user.getBookmarkedRecipes();
+
+
+            if (user == null) {
+                return new ResponseEntity<>("Error: User with provided id does not exist.", HttpStatus.NOT_FOUND);
+            } else if (bookmarkedRecipes == null || bookmarkedRecipes.size() == 0) {
+                return new ResponseEntity<>("Error: User has no bookmarked recipes.", HttpStatus.NOT_FOUND);
+            }
+
+
+            //Iterates through the bookmarked recipes to find the one to be deleted.
+            for (int i = 0; i < bookmarkedRecipes.size(); i++) {
+
+                if (bookmarkedRecipes.get(i).compareTo(actualRecipeId) == 0) {
+                    user.getBookmarkedRecipes().remove(i);
+
+                    UpdateResult result = _userCollection.replaceOne(eq("_id", actualUserId), user);
+
+                    if (result.getModifiedCount() == 0) {
+                        return new ResponseEntity<> ("Error: Could not remove bookmarked recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
+                    }
+
+                    return new ResponseEntity<>("Success: Removed bookmarked recipe.", HttpStatus.OK);
+                }
+            }
+
+            //If it gets here then there was no matching bookmarked recipe id matching the one provided.
+            return new ResponseEntity<>("Error: Provided recipe is not bookmarked for user.", HttpStatus.NOT_FOUND);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+
+
+
 }
+
