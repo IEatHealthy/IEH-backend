@@ -1,5 +1,7 @@
 package info.ieathealthy.models;
 
+import org.bson.types.ObjectId;
+
 import java.util.ArrayList;
 
 public class FullyPopulatedUser {
@@ -10,6 +12,8 @@ public class FullyPopulatedUser {
     private int skillLevel;
     private ArrayList<Badge> badgesEarned;
     private ArrayList<Title> titlesEarned;
+    private ArrayList<String> recipesCreated;
+    private ArrayList<String> bookmarkedRecipes;
     private Badge badgeSelected;
     private Title titleSelected;
 
@@ -19,6 +23,26 @@ public class FullyPopulatedUser {
         this.lastName = u.getLastName();
         this.username = u.getUsername();
         this.skillLevel = u.getSkillLevel();
+        recipesCreated = new ArrayList<>();
+        bookmarkedRecipes = new ArrayList<>();
+        badgesEarned = new ArrayList<>();
+        titlesEarned = new ArrayList<>();
+
+        ArrayList<ObjectId> br = u.getBookmarkedRecipes();
+        ArrayList<ObjectId> rc = u.getRecipesCreated();
+
+            if (br != null) {
+                for (ObjectId oi : br) {
+                    this.bookmarkedRecipes.add(oi.toString());
+                }
+            }
+
+            if (rc != null) {
+                for (ObjectId oi : rc) {
+                    this.recipesCreated.add(oi.toString());
+                }
+            }
+            
     }
 
     public String getEmail() {
@@ -91,5 +115,21 @@ public class FullyPopulatedUser {
 
     public void setTitleSelected(Title titleSelected) {
         this.titleSelected = titleSelected;
+    }
+
+    public ArrayList<String> getRecipesCreated() {
+        return recipesCreated;
+    }
+
+    public void setRecipesCreated(ArrayList<String> recipesCreated) {
+        this.recipesCreated = recipesCreated;
+    }
+
+    public ArrayList<String> getBookmarkedRecipes() {
+        return bookmarkedRecipes;
+    }
+
+    public void setBookmarkedRecipes(ArrayList<String> bookmarkedRecipes) {
+        this.bookmarkedRecipes = bookmarkedRecipes;
     }
 }
