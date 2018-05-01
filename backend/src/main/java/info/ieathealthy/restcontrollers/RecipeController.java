@@ -25,6 +25,7 @@ import info.ieathealthy.models.UserRating;
 import info.ieathealthy.models.FrontRecipe;
 import info.ieathealthy.models.StarRating;
 import info.ieathealthy.models.RecipeRating;
+import info.ieathealthy.models.Token;
 
 
 import java.util.ArrayList;
@@ -790,9 +791,9 @@ public class RecipeController {
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
     @RequestMapping(value="/api/recipe/recommended/{email}", method=RequestMethod.POST)
-    public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestBody byte[] tokenbytes){
+    public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestBody Token tokeno){
         try {
-            String token = new String(tokenbytes);
+            String token = tokeno.getToken();
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("email", email)).first();
