@@ -67,11 +67,11 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addRecipe(@RequestBody FrontRecipe recipe, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            User user = _userCollection.find(eq("email", email)).first();
 
             //Check that the user exists and at the least check the important values to make sure that they're not null or 0.
             if (user == null) {
@@ -123,7 +123,7 @@ public class RecipeController {
             _recipeCollection.insertOne(recipeToInsert);
 
             //Update the user data so that the newly created recipe is added to their list of created recipes.
-            UpdateResult result = _userCollection.replaceOne(eq("_id", user.getId()), user);
+            UpdateResult result = _userCollection.replaceOne(eq("email", email), user);
 
             if (result.getModifiedCount() == 0) {
                 return new ResponseEntity<>("Error: Could not store identifier of newly created recipe in user's data.", HttpStatus.NOT_FOUND);
@@ -191,15 +191,14 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.PUT)
-    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId,
+    public ResponseEntity<?> updateRecipeById(@PathVariable String id, @RequestParam(value="email") String email,
                                               @RequestBody FrontRecipe editedRecipe, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
-            ObjectId actualUserId = new ObjectId(userId);
-            User user = _userCollection.find(eq("_id", actualUserId)).first();
+            User user = _userCollection.find(eq("email", email)).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             ArrayList<ObjectId> recipesCreated = user.getRecipesCreated();
 
@@ -248,14 +247,14 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> deleteRecipeById(@PathVariable String id, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
 
-            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            User user = _userCollection.find(eq("email", email)).first();
             ArrayList<ObjectId> recipesCreated = user.getRecipesCreated();
 
 
@@ -319,13 +318,12 @@ public class RecipeController {
 
     //Gets the review of a specific user.
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeReviewById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token) {
+    public ResponseEntity<?> getRecipeReviewById(@PathVariable String id, @RequestParam(value="email") String email, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);         //Convert the recipe string id to an ObjectId.
-            ObjectId actualUserId = new ObjectId(userId); //Convert the user string id to an ObjectId.
 
             //Note: We can check if the provided recipe id references a recipe in the database but I don't think that's necessary.
 
@@ -341,7 +339,7 @@ public class RecipeController {
             //Search for user with the provided id to find their review.
             for (int i = 0 ; i < reviews.size(); i++) {
 
-                if (reviews.get(i).getUserId().compareTo(actualUserId) == 0) {
+                if (reviews.get(i).getUserEmail().equals(email)) {
                     return new ResponseEntity<>(reviews.get(i).getUserReview(), HttpStatus.OK);
                 }
             }
@@ -363,7 +361,7 @@ public class RecipeController {
 
             int wordCount = 0;                    //Word count of review.
             ObjectId recipeId = new ObjectId(id); //Convert the string recipe id to an ObjectId.
-            User user = _userCollection.find(eq("_id", newReview.getUserId())).first();
+            User user = _userCollection.find(eq("email", newReview.getUserEmail())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
 
@@ -402,7 +400,7 @@ public class RecipeController {
             //user has already written a review for the recipe so just replace it with the new one.
             for (int i = 0; i < reviews.size(); i++) {
 
-                if (reviews.get(i).getUserId().compareTo(newReview.getUserId()) == 0) {
+                if (reviews.get(i).getUserEmail().equals(newReview.getUserEmail())) {
                     //Update the review.
                     reviews.get(i).setUserReview(newReview.getUserReview());
                     UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
@@ -488,14 +486,13 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRecipeReviewById(@PathVariable String id, @RequestParam(value="userId") String userId,
+    public ResponseEntity<?> deleteRecipeReviewById(@PathVariable String id, @RequestParam(value="email") String email,
                                                     @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
-            ObjectId actualUserId = new ObjectId(userId);
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
 
             //If recipeReviews is null then the recipe has no reviews yet so user has not written a review for the recipe.
@@ -511,7 +508,7 @@ public class RecipeController {
             //Find matching user id and delete the review associated with the user.
             for (int i = 0; i < reviews.size(); i++) {
 
-                if (reviews.get(i).getUserId().compareTo(actualUserId) == 0){
+                if (reviews.get(i).getUserEmail().equals(email)){
                     recipeReviews.getReviews().remove(i);
                     UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
 
@@ -538,7 +535,7 @@ public class RecipeController {
 
     //Gets a specific rating for a user.
     @RequestMapping(value="/api/recipe/{id}/rating", method=RequestMethod.GET)
-    public ResponseEntity<?> getRatingsById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> getRatingsById(@PathVariable String id, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
@@ -555,12 +552,11 @@ public class RecipeController {
             }
 
             ArrayList<UserRating> ratings = recipeRating.getRatings();
-            ObjectId actualUserId = new ObjectId(userId);
 
             //Look for the rating of the user and return it if found.
             for(int i = 0; i < ratings.size(); i++) {
 
-                if (ratings.get(i).getUserId().compareTo(actualUserId) == 0) {
+                if (ratings.get(i).getUserEmail().equals(email)) {
                     return new ResponseEntity<>(ratings.get(i).getUserRating(), HttpStatus.OK);
                 }
             }
@@ -611,7 +607,7 @@ public class RecipeController {
 
             ObjectId recipeId = new ObjectId(id);
             Boolean updatedRating = false; //Records whether the new rating is an update to a previous rating.
-            User user = _userCollection.find(eq("_id", newUserRating.getUserId())).first();
+            User user = _userCollection.find(eq("email", newUserRating.getUserEmail())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             RecipeRating recipeRating = _ratingCollection.find(eq("_id", recipeId)).first();
 
@@ -644,7 +640,7 @@ public class RecipeController {
             //If the user has already rated this recipe then update their rating.
             for (UserRating u : recipeRating.getRatings()) {
 
-                if(u.getUserId().compareTo(newUserRating.getUserId()) == 0) {
+                if(u.getUserEmail().equals(newUserRating.getUserEmail())) {
                     u.setUserRating(newUserRating.getUserRating());
                     updatedRating = true;
                 }
@@ -679,7 +675,7 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteRatingById(@PathVariable String id, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token) {
+    public ResponseEntity<?> deleteRatingById(@PathVariable String id, @RequestParam(value="email") String email, @RequestParam(value="token") String token) {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
@@ -708,8 +704,7 @@ public class RecipeController {
 
                 sumOfRatings += ratingsHolder.get(i).getUserRating();
 
-                if (ratingsHolder.get(i).getUserId().compareTo(new ObjectId(userId)) == 0) {
-                    System.out.println("\n\nIn here\n\n");
+                if (ratingsHolder.get(i).getUserEmail().equals(email)) {
                     sumOfRatings -= ratingsHolder.get(i).getUserRating();
                     recipeRating.getRatings().remove(i);
                     i--;
@@ -827,14 +822,14 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.POST)
-    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId actualRecipeId = new ObjectId(recipeId);
 
             Recipe recipe = _recipeCollection.find(eq("_id", actualRecipeId)).first();
-            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            User user = _userCollection.find(eq("email", email)).first();
 
             if (recipe == null) {
                 return new ResponseEntity<>("Error: Recipe with provided id does not exist.", HttpStatus.NOT_FOUND);
@@ -860,7 +855,7 @@ public class RecipeController {
             bookmarkedRecipes.add(actualRecipeId);
             user.setBookmarkedRecipes(bookmarkedRecipes);
 
-            UpdateResult result = _userCollection.replaceOne(eq("_id", new ObjectId(userId)), user);
+            UpdateResult result = _userCollection.replaceOne(eq("email", email), user);
 
             if (result.getModifiedCount() == 0) {
                 return new ResponseEntity<>("Error: Could not add bookmark.", HttpStatus.INTERNAL_SERVER_ERROR);
@@ -876,14 +871,13 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.DELETE)
-    public ResponseEntity<?> deleteBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    public ResponseEntity<?> deleteBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            ObjectId actualUserId = new ObjectId(userId);
             ObjectId actualRecipeId = new ObjectId(recipeId);
 
-            User user = _userCollection.find(eq("_id", actualUserId)).first();
+            User user = _userCollection.find(eq("email", email)).first();
             ArrayList<ObjectId> bookmarkedRecipes = user.getBookmarkedRecipes();
 
 
@@ -900,7 +894,7 @@ public class RecipeController {
                 if (bookmarkedRecipes.get(i).compareTo(actualRecipeId) == 0) {
                     user.getBookmarkedRecipes().remove(i);
 
-                    UpdateResult result = _userCollection.replaceOne(eq("_id", actualUserId), user);
+                    UpdateResult result = _userCollection.replaceOne(eq("email", email), user);
 
                     if (result.getModifiedCount() == 0) {
                         return new ResponseEntity<> ("Error: Could not remove bookmarked recipe.", HttpStatus.INTERNAL_SERVER_ERROR);
