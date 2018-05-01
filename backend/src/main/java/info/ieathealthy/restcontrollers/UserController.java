@@ -102,7 +102,7 @@ public class UserController {
 
     //endpoint handles changing a password, provided the appropriate JWT is supplied.
     @RequestMapping(value="/api/user/{email}", method=RequestMethod.PUT)
-    public ResponseEntity<?> changeUserPassword(@PathVariable String email, @RequestParam(value = "token", required = true) String token, @RequestBody String newPassword){
+    public ResponseEntity<?> changeUserPassword(@PathVariable String email, @RequestParam(value = "token", required = true) String token, @RequestParam(value= "newPassword") String newPassword){
         try {
             //Not the best way of doing it. Should really store JWT in db on creation
             //and check to make sure that both signature keys match
