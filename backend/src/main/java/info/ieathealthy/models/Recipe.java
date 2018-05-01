@@ -9,7 +9,7 @@ import java.util.ArrayList;
 
 public class Recipe extends IncompleteRecipe {
 
-    private Binary foodImage;
+    protected Binary foodImage;
 
 
     public Recipe() {}

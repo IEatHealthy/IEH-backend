@@ -12,6 +12,8 @@ import javax.xml.bind.DatatypeConverter;
 public class FrontRecipe extends IncompleteRecipe {
 
     private Binary foodImage;
+    private String stringId;
+
 
 
     public FrontRecipe() {}
@@ -51,6 +53,38 @@ public class FrontRecipe extends IncompleteRecipe {
 
     }
 
+    public FrontRecipe(Recipe other) {
+        _id = null;
+        name = other.name;
+        typeOfFood = other.typeOfFood;
+        servings = other.servings;
+        prepTime = other.prepTime;
+        cookTime = other.cookTime;
+        readyInTime = other.readyInTime;
+        ingredients = other.ingredients;
+        steps = other.steps;
+        toolsNeeded = other.toolsNeeded;
+        description = other.description;
+        author = other.author;
+        calories = other.calories;
+        protein = other.protein;
+        fat = other.fat;
+        carbohydrate = other.carbohydrate;
+        fiber = other.fiber;
+        sugar = other.sugar;
+        calcium = other.calcium;
+        iron = other.iron;
+        potassium = other.potassium;
+        sodium = other.sodium;
+        vitaminC = other.vitaminC;
+        vitAiu = other.vitAiu;
+        vitDiu = other.vitDiu;
+        cholestrol = other.cholestrol;
+        foodImage = other.foodImage;
+        stringId = other._id.toString();
+        setDifficulty(other.getDifficulty());
+    }
+
     public Binary getFoodImage() { return foodImage; }
     //Image data should be passed as a base64string. That is then decoded into a byte[] to create Binary value.
     //If passed as anything else, the Binary data will still be valid but will be inconsistent with
@@ -61,4 +95,7 @@ public class FrontRecipe extends IncompleteRecipe {
             this.foodImage = new Binary(DatatypeConverter.parseBase64Binary(foodImage));
         }
     }
+
+    public String getStringId() { return stringId; }
+    public void setStringId(String stringId) { this.stringId = stringId; }
 }
