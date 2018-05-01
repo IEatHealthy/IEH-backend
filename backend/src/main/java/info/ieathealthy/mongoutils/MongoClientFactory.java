@@ -12,7 +12,7 @@ public class MongoClientFactory {
     public static MongoClient getInstance() {
         if(_instance == null){
             MongoClientURI uri = new MongoClientURI(
-                    "mongodb+srv://<PASSWORD>@ieathealthy-cluster0-0q8tc.mongodb.net/"
+                    "mongodb+srv://IEatHealthy:<PASSWORD>@ieathealthy-cluster0-0q8tc.mongodb.net/"
             );
             try {
                 _instance = new MongoClient(uri);

@@ -789,7 +789,7 @@ public class RecipeController {
     //Used to display 20 recipes that the user can see. They are like featured/recommended recipes. The recipes displayed
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
-    @RequestMapping(value="/api/recipe/recommended/{email}", method=RequestMethod.GET)
+    @RequestMapping(value="/api/recipe/recommended/{email}", method=RequestMethod.POST)
     public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestBody String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
