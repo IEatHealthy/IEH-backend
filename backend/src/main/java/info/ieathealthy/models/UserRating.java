@@ -3,18 +3,18 @@ package info.ieathealthy.models;
 import org.bson.types.ObjectId;
 
 public class UserRating {
-    private String email;
+    private String userEmail;
     private StarRating userRating;
 
     public UserRating() {}
 
-    public UserRating(String email, StarRating userRating) {
-        this.email = email;
+    public UserRating(String userEmail, StarRating userRating) {
+        this.userEmail = userEmail;
         this.userRating = userRating;
     }
 
-    public String getUserEmail() { return email; }
-    public void setUserEmail(String email) { this.email = email; }
+    public String getUserEmail() { return userEmail; }
+    public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
     public int getUserRating() { return userRating.getStarRating(); }
     public void setUserRating(int userRating) {
         switch(userRating){

@@ -353,16 +353,20 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestBody UserReview newReview, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestBody UserReview newReview){
 
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
-
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            System.out.println(newReview.getUserEmail());
+            System.out.println(newReview.getUserReview());
             int wordCount = 0;                    //Word count of review.
             ObjectId recipeId = new ObjectId(id); //Convert the string recipe id to an ObjectId.
             User user = _userCollection.find(eq("email", newReview.getUserEmail())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
+
+
 
             //Check how many words are in the review by counting the spaces.
             for (int i = 0; i < newReview.getUserReview().length(); i++) {
@@ -825,9 +829,10 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.POST)
-    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
+    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email){
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //@RequestParam(value="token") String token
+            //eJwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId actualRecipeId = new ObjectId(recipeId);
 
