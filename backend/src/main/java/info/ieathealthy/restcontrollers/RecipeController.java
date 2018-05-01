@@ -150,7 +150,10 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: Recipe with provided name was not found.", HttpStatus.NOT_FOUND);
             }
 
-            return new ResponseEntity<>(recipe, HttpStatus.OK);
+
+            FrontRecipe recipeToReturn = new FrontRecipe(recipe);
+
+            return new ResponseEntity<>(recipeToReturn, HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
@@ -162,6 +165,7 @@ public class RecipeController {
     public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id, @RequestParam(value="token") String token){
 
         try {
+
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             Recipe recipe = _recipeCollection.find(eq("_id",  new ObjectId(id))).first();
@@ -172,7 +176,9 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: Recipe with provided id was not found.", HttpStatus.NOT_FOUND);
             }
 
-            return new ResponseEntity<>(recipe, HttpStatus.OK);
+            FrontRecipe recipeToReturn = new FrontRecipe(recipe);
+
+            return new ResponseEntity<>(recipeToReturn, HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
@@ -757,14 +763,15 @@ public class RecipeController {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             //List to store the matching recipes.
-            ArrayList<Recipe> matchingRecipes = new ArrayList<>();
+            ArrayList<FrontRecipe> matchingRecipes = new ArrayList<>();
 
             //Simple search that searches a recipe name for whatever the user is searching for.
             FindIterable<Recipe> recipesFound = _recipeCollection.find(regex("name", search, "i"));
 
             //Puts the recipes found into the ArrayList so they can be returned.
             for (Recipe rec: recipesFound) {
-                matchingRecipes.add(rec);
+                FrontRecipe convertedRec = new FrontRecipe(rec);
+                matchingRecipes.add(convertedRec);
             }
 
             if (matchingRecipes.size() != 0) {
@@ -787,7 +794,7 @@ public class RecipeController {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
-            ArrayList<Recipe> recipesToReturn = new ArrayList<>();
+            ArrayList<FrontRecipe> recipesToReturn = new ArrayList<>();
 
             if (user == null) {
                 return new ResponseEntity<>("Error: User not found.", HttpStatus.NOT_FOUND);
@@ -798,7 +805,8 @@ public class RecipeController {
 
             //Puts the recipes found into the ArrayList so they can be returned.
             for (Recipe rec: recipesFound) {
-                recipesToReturn.add(rec);
+                FrontRecipe convertedRec = new FrontRecipe(rec);
+                recipesToReturn.add(convertedRec);
             }
 
             //Shouldn't happen.
@@ -908,10 +916,6 @@ public class RecipeController {
             return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
-
-
-
 
 }
 
