@@ -259,6 +259,7 @@ public class UserController {
                     toReturn.setBookmarkedRecipes(getRecipes(user.getBookmarkedRecipes()));
                     toReturn.setRecipesCreated(getRecipes(user.getRecipesCreated()));
 
+
                     return new ResponseEntity<>(toReturn, HttpStatus.OK);
                 } catch(Exception e){
                     return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
@@ -272,11 +273,13 @@ public class UserController {
 
     private ArrayList<Badge> getBadges(ArrayList<ObjectId> badgeIds){
         ArrayList<Badge> badgesFound = new ArrayList<Badge>();
-        for(ObjectId badgeId: badgeIds){
-            Badge toInsert = null;
-            toInsert = _badgeCollection.find(eq("_id", badgeId)).first();
-            if(toInsert != null){
-                badgesFound.add(toInsert);
+        if(badgeIds != null) {
+            for (ObjectId badgeId : badgeIds) {
+                Badge toInsert = null;
+                toInsert = _badgeCollection.find(eq("_id", badgeId)).first();
+                if (toInsert != null) {
+                    badgesFound.add(toInsert);
+                }
             }
         }
 
@@ -285,11 +288,13 @@ public class UserController {
 
     private ArrayList<Title> getTitles(ArrayList<ObjectId> titleIds){
         ArrayList<Title> titlesFound = new ArrayList<Title>();
-        for(ObjectId titleId: titleIds){
-            Title toInsert = null;
-            toInsert = _titleCollection.find(eq("_id", titleId)).first();
-            if(toInsert != null){
-                titlesFound.add(toInsert);
+        if(titleIds != null) {
+            for (ObjectId titleId : titleIds) {
+                Title toInsert = null;
+                toInsert = _titleCollection.find(eq("_id", titleId)).first();
+                if (toInsert != null) {
+                    titlesFound.add(toInsert);
+                }
             }
         }
 
@@ -298,11 +303,13 @@ public class UserController {
 
     private ArrayList<Recipe> getRecipes(ArrayList<ObjectId> recipeIds){
         ArrayList<Recipe> recipesFound = new ArrayList<>();
-        for(ObjectId recipeId: recipeIds){
-            Recipe toInsert = null;
-            toInsert = _recipeCollection.find(eq("_id", recipeId)).first();
-            if(toInsert != null){
-                recipesFound.add(toInsert);
+        if(recipeIds != null) {
+            for (ObjectId recipeId : recipeIds) {
+                Recipe toInsert = null;
+                toInsert = _recipeCollection.find(eq("_id", recipeId)).first();
+                if (toInsert != null) {
+                    recipesFound.add(toInsert);
+                }
             }
         }
         return recipesFound;
