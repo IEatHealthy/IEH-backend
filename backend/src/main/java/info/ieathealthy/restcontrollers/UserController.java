@@ -1,12 +1,7 @@
 package info.ieathealthy.restcontrollers;
 
 import com.mongodb.Mongo;
-import info.ieathealthy.models.ClientUser;
-import info.ieathealthy.models.ProtectedUser;
-import info.ieathealthy.models.Badge;
-import info.ieathealthy.models.Title;
-import info.ieathealthy.models.Recipe;
-import info.ieathealthy.models.FullyPopulatedUser;
+import info.ieathealthy.models.*;
 import io.jsonwebtoken.ClaimJwtException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -18,7 +13,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 import static com.mongodb.client.model.Filters.*;
 import static com.mongodb.client.model.Updates.*;
-import info.ieathealthy.models.User;
+
 import org.mindrot.jbcrypt.BCrypt;
 import org.bson.types.ObjectId;
 
@@ -233,7 +228,15 @@ public class UserController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } else {
             //convert object to safe version that can be returned to client
-            return new ResponseEntity<>(new ProtectedUser(toReturn), HttpStatus.OK);
+            ProtectedFullyPopulatedUser clientUser = new ProtectedFullyPopulatedUser(toReturn);
+            clientUser.setBadgesEarned(getBadges(toReturn.getBadgesEarned()));
+            clientUser.setTitlesEarned(getTitles(toReturn.getTitlesEarned()));
+            clientUser.setBadgeSelected(getBadgeSet(toReturn.getBadgeSelected()));
+            clientUser.setTitleSelected(getTitleSet(toReturn.getTitleSelected()));
+
+
+
+            return new ResponseEntity<>(clientUser, HttpStatus.OK);
         }
     }
 
