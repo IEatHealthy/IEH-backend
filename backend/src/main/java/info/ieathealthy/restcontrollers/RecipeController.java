@@ -162,11 +162,12 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/id", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id, @RequestParam(value="token") String token){
+    public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id){
 
         try {
 
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
 
             Recipe recipe = _recipeCollection.find(eq("_id",  new ObjectId(id))).first();
 
@@ -788,12 +789,12 @@ public class RecipeController {
     //Used to display 20 recipes that the user can see. They are like featured/recommended recipes. The recipes displayed
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
-    @RequestMapping(value="/api/recipe/recommended", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecommendedRecipes(@RequestParam(value="userId") String userId, @RequestParam(value="token") String token){
+    @RequestMapping(value="/api/recipe/recommended/{email}", method=RequestMethod.GET)
+    public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestParam(value="token") String token){
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
-            User user = _userCollection.find(eq("_id", new ObjectId(userId))).first();
+            User user = _userCollection.find(eq("email", email)).first();
             ArrayList<FrontRecipe> recipesToReturn = new ArrayList<>();
 
             if (user == null) {
