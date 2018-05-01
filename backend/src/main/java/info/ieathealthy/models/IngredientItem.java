@@ -4,6 +4,29 @@ import org.bson.types.ObjectId;
 
 public class IngredientItem {
     private String desc;
+    //private ObjectId ingredientId;
+    private String unitOfMeasure;
+    private double amount;
+
+    public IngredientItem() {}
+
+    public IngredientItem(String desc, String unitOfMeasure, double amount){
+        this.desc = desc;
+        this.unitOfMeasure = unitOfMeasure;
+        this.amount = amount;
+    }
+
+    public String getDesc() { return desc; }
+    public void setDesc(String desc) { this.desc = desc; }
+    public String getUnitOfMeasure() { return unitOfMeasure; }
+    public void setUnitOfMeasure(String unitOfMeasure) { this.unitOfMeasure = unitOfMeasure; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amount) { this.amount = amount; }
+}
+
+/*
+public class IngredientItem {
+    private String desc;
     private ObjectId ingredientId;
     private String unitOfMeasure;
     private double amount;
@@ -26,4 +49,4 @@ public class IngredientItem {
     public double getAmount() { return amount; }
     public void setAmount(double amount) { this.amount = amount; }
 }
-
+*/
