@@ -12,8 +12,8 @@ public class FullyPopulatedUser {
     private int skillLevel;
     private ArrayList<Badge> badgesEarned;
     private ArrayList<Title> titlesEarned;
-    private ArrayList<ObjectId> recipesCreated;
-    private ArrayList<ObjectId> bookmarkedRecipes;
+    private ArrayList<String> recipesCreated;
+    private ArrayList<String> bookmarkedRecipes;
     private Badge badgeSelected;
     private Title titleSelected;
 
@@ -23,8 +23,26 @@ public class FullyPopulatedUser {
         this.lastName = u.getLastName();
         this.username = u.getUsername();
         this.skillLevel = u.getSkillLevel();
-        this.bookmarkedRecipes = u.getBookmarkedRecipes();
-        this.recipesCreated = u.getRecipesCreated();
+        recipesCreated = new ArrayList<>();
+        bookmarkedRecipes = new ArrayList<>();
+        badgesEarned = new ArrayList<>();
+        titlesEarned = new ArrayList<>();
+
+        ArrayList<ObjectId> br = u.getBookmarkedRecipes();
+        ArrayList<ObjectId> rc = u.getRecipesCreated();
+
+            if (br != null) {
+                for (ObjectId oi : br) {
+                    this.bookmarkedRecipes.add(oi.toString());
+                }
+            }
+
+            if (rc != null) {
+                for (ObjectId oi : rc) {
+                    this.recipesCreated.add(oi.toString());
+                }
+            }
+            
     }
 
     public String getEmail() {
@@ -99,19 +117,19 @@ public class FullyPopulatedUser {
         this.titleSelected = titleSelected;
     }
 
-    public ArrayList<ObjectId> getRecipesCreated() {
+    public ArrayList<String> getRecipesCreated() {
         return recipesCreated;
     }
 
-    public void setRecipesCreated(ArrayList<ObjectId> recipesCreated) {
+    public void setRecipesCreated(ArrayList<String> recipesCreated) {
         this.recipesCreated = recipesCreated;
     }
 
-    public ArrayList<ObjectId> getBookmarkedRecipes() {
+    public ArrayList<String> getBookmarkedRecipes() {
         return bookmarkedRecipes;
     }
 
-    public void setBookmarkedRecipes(ArrayList<ObjectId> bookmarkedRecipes) {
+    public void setBookmarkedRecipes(ArrayList<String> bookmarkedRecipes) {
         this.bookmarkedRecipes = bookmarkedRecipes;
     }
 }
