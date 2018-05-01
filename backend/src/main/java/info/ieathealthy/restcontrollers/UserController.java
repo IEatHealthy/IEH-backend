@@ -256,8 +256,8 @@ public class UserController {
                     toReturn.setTitlesEarned(getTitles(user.getTitlesEarned()));
                     toReturn.setBadgeSelected(getBadgeSet(user.getBadgeSelected()));
                     toReturn.setTitleSelected(getTitleSet(user.getTitleSelected()));
-                    toReturn.setBookmarkedRecipes(getRecipes(user.getBookmarkedRecipes()));
-                    toReturn.setRecipesCreated(getRecipes(user.getRecipesCreated()));
+//                    toReturn.setBookmarkedRecipes(getRecipes(user.getBookmarkedRecipes()));
+//                    toReturn.setRecipesCreated(getRecipes(user.getRecipesCreated()));
 
 
                     return new ResponseEntity<>(toReturn, HttpStatus.OK);

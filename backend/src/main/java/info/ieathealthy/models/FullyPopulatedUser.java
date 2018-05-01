@@ -1,5 +1,7 @@
 package info.ieathealthy.models;
 
+import org.bson.types.ObjectId;
+
 import java.util.ArrayList;
 
 public class FullyPopulatedUser {
@@ -10,8 +12,8 @@ public class FullyPopulatedUser {
     private int skillLevel;
     private ArrayList<Badge> badgesEarned;
     private ArrayList<Title> titlesEarned;
-    private ArrayList<Recipe> recipesCreated;
-    private ArrayList<Recipe> bookmarkedRecipes;
+    private ArrayList<ObjectId> recipesCreated;
+    private ArrayList<ObjectId> bookmarkedRecipes;
     private Badge badgeSelected;
     private Title titleSelected;
 
@@ -21,6 +23,8 @@ public class FullyPopulatedUser {
         this.lastName = u.getLastName();
         this.username = u.getUsername();
         this.skillLevel = u.getSkillLevel();
+        this.bookmarkedRecipes = u.getBookmarkedRecipes();
+        this.recipesCreated = u.getRecipesCreated();
     }
 
     public String getEmail() {
@@ -95,19 +99,19 @@ public class FullyPopulatedUser {
         this.titleSelected = titleSelected;
     }
 
-    public ArrayList<Recipe> getRecipesCreated() {
+    public ArrayList<ObjectId> getRecipesCreated() {
         return recipesCreated;
     }
 
-    public void setRecipesCreated(ArrayList<Recipe> recipesCreated) {
+    public void setRecipesCreated(ArrayList<ObjectId> recipesCreated) {
         this.recipesCreated = recipesCreated;
     }
 
-    public ArrayList<Recipe> getBookmarkedRecipes() {
+    public ArrayList<ObjectId> getBookmarkedRecipes() {
         return bookmarkedRecipes;
     }
 
-    public void setBookmarkedRecipes(ArrayList<Recipe> bookmarkedRecipes) {
+    public void setBookmarkedRecipes(ArrayList<ObjectId> bookmarkedRecipes) {
         this.bookmarkedRecipes = bookmarkedRecipes;
     }
 }
