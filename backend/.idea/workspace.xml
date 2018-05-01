@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b91078d-b85f-4637-9b66-82ac69ea3c0d" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/src/main/java/info/ieathealthy/models/UserRating.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/info/ieathealthy/models/UserRating.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/info/ieathealthy/models/UserReview.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/info/ieathealthy/models/UserReview.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/classes/info/ieathealthy/restcontrollers/RecipeController.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/classes/info/ieathealthy/restcontrollers/RecipeController.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/RecipeController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/RecipeController.java" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/.gradle/" />
@@ -62,8 +62,8 @@
       <file leaf-file-name="UserController.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/UserController.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3870">
-              <caret line="283" selection-start-line="283" selection-end-line="283" />
+            <state relative-caret-position="106">
+              <caret line="60" column="56" selection-start-line="60" selection-start-column="52" selection-end-line="60" selection-end-column="56" />
             </state>
           </provider>
         </entry>
@@ -80,8 +80,8 @@
       <file leaf-file-name="RecipeController.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/RecipeController.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="244">
-              <caret line="87" lean-forward="true" selection-start-line="87" selection-end-line="87" />
+            <state relative-caret-position="411">
+              <caret line="912" column="31" lean-forward="true" selection-start-line="912" selection-start-column="31" selection-end-line="912" selection-end-column="31" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -152,6 +152,7 @@
       <find>regex</find>
       <find>difficulty</find>
       <find>_id</find>
+      <find>bookmark</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -729,7 +730,7 @@
       <workItem from="1525118786052" duration="22000" />
       <workItem from="1525130158467" duration="11059000" />
       <workItem from="1525150280891" duration="966000" />
-      <workItem from="1525156493394" duration="1072000" />
+      <workItem from="1525156493394" duration="4301000" />
     </task>
     <task id="LOCAL-00001" summary="Put token in request body.">
       <created>1525151085642</created>
@@ -742,7 +743,7 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="198760000" />
+    <option name="totallyTimeSpent" value="201989000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -774,11 +775,11 @@
       <window_info id="Image Layers" order="3" />
       <window_info anchor="bottom" id="Java Enterprise" order="10" />
       <window_info anchor="right" id="Capture Analysis" order="4" />
-      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.3179551" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.3179551" />
       <window_info anchor="bottom" id="Version Control" order="13" />
       <window_info anchor="bottom" id="Spring" order="7" weight="0.32917705" />
       <window_info anchor="bottom" id="Terminal" order="9" weight="0.32917705" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.48263255" visible="true" weight="0.14520743" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.48263255" visible="true" weight="0.14520743" />
       <window_info anchor="right" id="Bean Validation" order="9" />
       <window_info id="Web" order="6" sideWeight="0.5173675" side_tool="true" visible="true" weight="0.14520743" />
       <window_info anchor="right" id="Gradle" order="6" />
@@ -1102,13 +1103,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/UserController.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3870">
-          <caret line="283" selection-start-line="283" selection-end-line="283" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/models/UserReview.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="270">
@@ -1153,10 +1147,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/UserController.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="106">
+          <caret line="60" column="56" selection-start-line="60" selection-start-column="52" selection-end-line="60" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/main/java/info/ieathealthy/restcontrollers/RecipeController.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="244">
-          <caret line="87" lean-forward="true" selection-start-line="87" selection-end-line="87" />
+        <state relative-caret-position="411">
+          <caret line="912" column="31" lean-forward="true" selection-start-line="912" selection-start-column="31" selection-end-line="912" selection-end-column="31" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>

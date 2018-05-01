@@ -126,7 +126,7 @@ public class RecipeController {
             UpdateResult result = _userCollection.replaceOne(eq("email", email), user);
 
             if (result.getModifiedCount() == 0) {
-                return new ResponseEntity<>("Error: Could not store identifier of newly created recipe in user's data.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>("Error: Could not store identifier of newly created recipe in user's data.", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             return new ResponseEntity<>("Success: Recipe was created.", HttpStatus.OK);
@@ -163,11 +163,10 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/id", method=RequestMethod.GET)
-    public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id){
+    public ResponseEntity<?> getRecipeById(@RequestParam(value="id") String id, @RequestParam(value="token") String token){
 
         try {
-
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
 
             Recipe recipe = _recipeCollection.find(eq("_id",  new ObjectId(id))).first();
@@ -301,9 +300,9 @@ public class RecipeController {
 
             Review recipeReviews = _reviewCollection.find(eq("_id", new ObjectId(id))).first();
 
-            //Return an error reviews for the recipe were not found. Otherwise return the reviews.
+            //If recipeReviews is null then return it anyway. The front end will handle it.
             if (recipeReviews == null) {
-                return new ResponseEntity<>("Error: No reviews with provided recipe id were found.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(recipeReviews, HttpStatus.OK);
             }
 
             return new ResponseEntity<>(recipeReviews.getReviews(), HttpStatus.OK);
@@ -329,9 +328,9 @@ public class RecipeController {
 
             Review recipeReviews = _reviewCollection.find(eq("_id", recipeId)).first();
 
-            //Return an error reviews for the recipe were not found. Otherwise return the reviews.
+            //If there are no reviews then just return recipeReviews anyway. The frontend will handle it.
             if (recipeReviews == null) {
-                return new ResponseEntity<>("Error: No recipe reviews with provided id were found.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(recipeReviews, HttpStatus.OK);
             }
 
             ArrayList<UserReview> reviews = recipeReviews.getReviews();
@@ -523,7 +522,7 @@ public class RecipeController {
                 }
             }
 
-            //If it gets here then the user has not written a review for the recipe.
+            //If it gets here then the user has not written a review for the recipe. Shouldn't happen.
             return new ResponseEntity<>("Error: User has not written a review for recipe with the provided id.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
@@ -546,10 +545,12 @@ public class RecipeController {
             //If we want to be more precise with the error, we can search for a recipe with the given id and
             //if nothing is found then the recipe id is invalid. But this will probably do for now.
 
-            //If recipeRating is null then either the recipe id is bad or rating for this recipe don't exist.
+            //Return the null recipeRating. The front end will handle it.
             if (recipeRating == null) {
-                return new ResponseEntity<>("Error: Either the recipe id is invalid or ratings for the recipe don't exist yet.", HttpStatus.NOT_FOUND);
+                return new ResponseEntity<>(recipeRating, HttpStatus.OK);
             }
+
+
 
             ArrayList<UserRating> ratings = recipeRating.getRatings();
 
@@ -583,10 +584,13 @@ public class RecipeController {
             //If we want to be more precise with the error, we can search for a recipe with the given id and
             //if nothing is found then the recipe id is invalid. But this will probably do for now.
 
+            //It's probably better just to return the ratings anyway even if there are none.
+            /*
             //If recipeRating is null then either the recipe id is bad or rating for this recipe don't exist.
             if (recipeRating == null) {
                 return new ResponseEntity<>("Error: Either the recipe id is invalid or ratings for the recipe don't exist", HttpStatus.NOT_FOUND);
             }
+            */
 
             return new ResponseEntity<>(recipeRating, HttpStatus.OK);
 
@@ -693,6 +697,7 @@ public class RecipeController {
             //If recipeRating is null then either the recipe id is invalid or no ratings exist for the recipe.
             //Thus a rating cannot be deleted.
             //Otherwise, find the rating and delete it.
+            //This case shouldn't happen unless the client did something that they're not supposed to.
             if (recipeRating == null) {
                 return new ResponseEntity<>("Error: Either an invalid recipe id was provided or recipe has not yet been rated." , HttpStatus.NOT_FOUND);
             }
@@ -712,7 +717,7 @@ public class RecipeController {
             }
 
             //Update the total rating. If sum is 0 then there are no more ratings and we don't want to divide by 0.
-            //If it is 0, then remove the document from the collection.
+            //The document which will now contain 0 ratings will be removed from the database.
             if (sumOfRatings != 0) {
                 recipeRating.setTotalRating(sumOfRatings / recipeRating.getRatings().size());
             } else {
@@ -771,11 +776,8 @@ public class RecipeController {
                 matchingRecipes.add(convertedRec);
             }
 
-            if (matchingRecipes.size() != 0) {
-                return new ResponseEntity<>(matchingRecipes, HttpStatus.OK);
-            }
-
-            return new ResponseEntity<>("Error: Could not find recipes matching input.", HttpStatus.NOT_FOUND);
+            //Returns the recipes. If no recipes were found the frontend will handle that.
+            return new ResponseEntity<>(matchingRecipes, HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
@@ -807,9 +809,10 @@ public class RecipeController {
                 recipesToReturn.add(convertedRec);
             }
 
-            //Shouldn't happen.
+            //In case there weren't any recipes found which is highly unlikely, just grab the first 20 recipes in the database.
             if (recipesToReturn.size() == 0) {
-                return new ResponseEntity<>("Error: No recipes found for some reason.", HttpStatus.NOT_FOUND);
+                recipesFound = _recipeCollection.find().limit(20);
+                return new ResponseEntity<>(recipesFound, HttpStatus.OK);
             }
 
             return new ResponseEntity<>(recipesToReturn, HttpStatus.OK);
@@ -844,11 +847,11 @@ public class RecipeController {
                 bookmarkedRecipes = new ArrayList<ObjectId>();
             }
 
-            //Make sure that user has not already bookmarked recipe.
+            //If the user has already bookmarked the recipe then just return and don't do anything.
             for (int i = 0; i < bookmarkedRecipes.size(); i++) {
 
                 if (bookmarkedRecipes.get(i).compareTo(actualRecipeId) == 0) {
-                    return new ResponseEntity<>("Error: User has already bookmarked recipe.", HttpStatus.CONFLICT);
+                    return new ResponseEntity<>("Success: Bookmark was added.", HttpStatus.OK);
                 }
             }
 
@@ -884,6 +887,8 @@ public class RecipeController {
             if (user == null) {
                 return new ResponseEntity<>("Error: User with provided id does not exist.", HttpStatus.NOT_FOUND);
             } else if (bookmarkedRecipes == null || bookmarkedRecipes.size() == 0) {
+
+                //This case shouldn't happen unless the client did something they're not supposed to.
                 return new ResponseEntity<>("Error: User has no bookmarked recipes.", HttpStatus.NOT_FOUND);
             }
 
@@ -905,6 +910,7 @@ public class RecipeController {
             }
 
             //If it gets here then there was no matching bookmarked recipe id matching the one provided.
+            //Shouldn't happen.
             return new ResponseEntity<>("Error: Provided recipe is not bookmarked for user.", HttpStatus.NOT_FOUND);
 
         } catch (SignatureException | ExpiredJwtException e) {
