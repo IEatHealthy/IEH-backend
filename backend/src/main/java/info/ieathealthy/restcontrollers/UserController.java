@@ -149,6 +149,28 @@ public class UserController {
             String hash = BCrypt.hashpw(cu.getPassword(), BCrypt.gensalt());
             User toSubmit = new User(cu, hash);
 
+            //now initialize a few things for db sanity
+            ObjectId newbie = _badgeCollection.find(eq("awardOnSignup", true)).first().getId();
+            toSubmit.setBadgeSelected(newbie);
+
+            ArrayList<ObjectId> defaultBadges = new ArrayList<>();
+            defaultBadges.add(newbie);
+            toSubmit.setBadgesEarned(defaultBadges);
+
+            ObjectId newbieTitle = _titleCollection.find(eq("awardOnSignUp", true)).first().getId();
+            toSubmit.setTitleSelected(newbieTitle);
+
+            ArrayList<ObjectId> defaultTitles = new ArrayList<>();
+            defaultTitles.add(newbieTitle);
+            toSubmit.setTitlesEarned(defaultTitles);
+
+            ArrayList<ObjectId> defaultEmpty = new ArrayList<>();
+
+
+            toSubmit.setBookmarkedRecipes(defaultEmpty);
+            toSubmit.setRecipesCreated(defaultEmpty);
+
+
             try {
                 _userCollection.insertOne(toSubmit);
             } catch (Exception e){

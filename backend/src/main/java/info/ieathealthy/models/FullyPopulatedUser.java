@@ -42,7 +42,7 @@ public class FullyPopulatedUser {
                     this.recipesCreated.add(oi.toString());
                 }
             }
-            
+
     }
 
     public String getEmail() {
