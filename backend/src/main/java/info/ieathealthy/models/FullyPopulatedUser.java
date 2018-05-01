@@ -10,6 +10,8 @@ public class FullyPopulatedUser {
     private int skillLevel;
     private ArrayList<Badge> badgesEarned;
     private ArrayList<Title> titlesEarned;
+    private ArrayList<Recipe> recipesCreated;
+    private ArrayList<Recipe> bookmarkedRecipes;
     private Badge badgeSelected;
     private Title titleSelected;
 
@@ -91,5 +93,21 @@ public class FullyPopulatedUser {
 
     public void setTitleSelected(Title titleSelected) {
         this.titleSelected = titleSelected;
+    }
+
+    public ArrayList<Recipe> getRecipesCreated() {
+        return recipesCreated;
+    }
+
+    public void setRecipesCreated(ArrayList<Recipe> recipesCreated) {
+        this.recipesCreated = recipesCreated;
+    }
+
+    public ArrayList<Recipe> getBookmarkedRecipes() {
+        return bookmarkedRecipes;
+    }
+
+    public void setBookmarkedRecipes(ArrayList<Recipe> bookmarkedRecipes) {
+        this.bookmarkedRecipes = bookmarkedRecipes;
     }
 }

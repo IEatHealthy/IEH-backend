@@ -1,9 +1,11 @@
 package info.ieathealthy.restcontrollers;
 
+import com.mongodb.Mongo;
 import info.ieathealthy.models.ClientUser;
 import info.ieathealthy.models.ProtectedUser;
 import info.ieathealthy.models.Badge;
 import info.ieathealthy.models.Title;
+import info.ieathealthy.models.Recipe;
 import info.ieathealthy.models.FullyPopulatedUser;
 import io.jsonwebtoken.ClaimJwtException;
 import org.springframework.web.bind.annotation.*;
@@ -40,6 +42,7 @@ public class UserController {
     private final MongoCollection<User> _userCollection;
     private final MongoCollection<Badge> _badgeCollection;
     private final MongoCollection<Title> _titleCollection;
+    private final MongoCollection<Recipe> _recipeCollection;
     private final Key _sigKey;
 //    private final Key jwtKey;
 
@@ -51,6 +54,7 @@ public class UserController {
         this._userCollection = this._userDb.getCollection("users", User.class).withCodecRegistry(registry);
         this._badgeCollection = this._userDb.getCollection("badges", Badge.class).withCodecRegistry(registry);
         this._titleCollection = this._userDb.getCollection("title", Title.class).withCodecRegistry(registry);
+        this._recipeCollection = this._client.getDatabase("food-data").getCollection("recipes", Recipe.class).withCodecRegistry(registry);
         this._sigKey = sigKey;
     }
 
@@ -252,6 +256,8 @@ public class UserController {
                     toReturn.setTitlesEarned(getTitles(user.getTitlesEarned()));
                     toReturn.setBadgeSelected(getBadgeSet(user.getBadgeSelected()));
                     toReturn.setTitleSelected(getTitleSet(user.getTitleSelected()));
+                    toReturn.setBookmarkedRecipes(getRecipes(user.getBookmarkedRecipes()));
+                    toReturn.setRecipesCreated(getRecipes(user.getRecipesCreated()));
 
                     return new ResponseEntity<>(toReturn, HttpStatus.OK);
                 } catch(Exception e){
@@ -288,6 +294,18 @@ public class UserController {
         }
 
         return titlesFound;
+    }
+
+    private ArrayList<Recipe> getRecipes(ArrayList<ObjectId> recipeIds){
+        ArrayList<Recipe> recipesFound = new ArrayList<>();
+        for(ObjectId recipeId: recipeIds){
+            Recipe toInsert = null;
+            toInsert = _recipeCollection.find(eq("_id", recipeId)).first();
+            if(toInsert != null){
+                recipesFound.add(toInsert);
+            }
+        }
+        return recipesFound;
     }
 
     private Badge getBadgeSet(ObjectId badgeId){
