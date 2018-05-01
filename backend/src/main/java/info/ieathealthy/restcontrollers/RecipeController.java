@@ -790,8 +790,9 @@ public class RecipeController {
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
     @RequestMapping(value="/api/recipe/recommended/{email}", method=RequestMethod.POST)
-    public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestBody String token){
+    public ResponseEntity<?> getRecommendedRecipes(@PathVariable(value="email") String email, @RequestBody byte[] tokenbytes){
         try {
+            String token = new String(tokenbytes);
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             User user = _userCollection.find(eq("email", email)).first();
