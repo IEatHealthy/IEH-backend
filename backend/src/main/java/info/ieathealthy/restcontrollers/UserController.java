@@ -50,7 +50,7 @@ public class UserController {
         this._userDb = client.getDatabase("i-eat-healthy");
         this._userCollection = this._userDb.getCollection("users", User.class).withCodecRegistry(registry);
         this._badgeCollection = this._userDb.getCollection("badges", Badge.class).withCodecRegistry(registry);
-        this._titleCollection = this._userDb.getCollection("titles", Title.class).withCodecRegistry(registry);
+        this._titleCollection = this._userDb.getCollection("title", Title.class).withCodecRegistry(registry);
         this._sigKey = sigKey;
     }
 
