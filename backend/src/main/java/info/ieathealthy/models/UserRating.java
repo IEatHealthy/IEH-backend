@@ -4,18 +4,20 @@ import org.bson.types.ObjectId;
 
 public class UserRating {
     private String userEmail;
-    private StarRating userRating;
+    private int userRating;
 
     public UserRating() {}
 
-    public UserRating(String userEmail, StarRating userRating) {
+    public UserRating(String userEmail, int userRating) {
         this.userEmail = userEmail;
         this.userRating = userRating;
     }
 
     public String getUserEmail() { return userEmail; }
     public void setUserEmail(String userEmail) { this.userEmail = userEmail; }
-    public int getUserRating() { return userRating.getStarRating(); }
+    public int getUserRating() { return userRating; }
+    public void setUserRating(int userRating) { this.userRating = userRating; }
+    /*
     public void setUserRating(int userRating) {
         switch(userRating){
             case 1: this.userRating = StarRating.ONESTAR;
@@ -31,4 +33,5 @@ public class UserRating {
             default: this.userRating = StarRating.INVALID;
         }
     }
+    */
 }

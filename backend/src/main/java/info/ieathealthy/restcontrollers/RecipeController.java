@@ -634,7 +634,7 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: User with provided id not found.", HttpStatus.NOT_FOUND);
             } else if (recipe == null) {
                 return new ResponseEntity<>("Error: Recipe with provided id not found", HttpStatus.NOT_FOUND);
-            } else if (newUserRating.getUserRating() == StarRating.INVALID.getStarRating()) {
+            } else if (newUserRating.getUserRating() < 1 || newUserRating.getUserRating() > 5) {
                 return new ResponseEntity<>("Error: Invalid rating for recipe. Not within range of 1 - 5", HttpStatus.BAD_REQUEST);
             }
 
