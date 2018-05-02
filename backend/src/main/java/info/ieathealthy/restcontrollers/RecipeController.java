@@ -353,11 +353,10 @@ public class RecipeController {
     }
 
     @RequestMapping(value="/api/recipe/{id}/review", method=RequestMethod.POST)
-    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestBody UserReview newReview){
+    public ResponseEntity<?> addRecipeReviewById(@PathVariable String id, @RequestBody UserReview newReview, @RequestParam(value="token") String token){
 
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
             System.out.println(newReview.getUserEmail());
             System.out.println(newReview.getUserReview());
             int wordCount = 0;                    //Word count of review.
@@ -581,10 +580,9 @@ public class RecipeController {
         }
     }
 
-    //Gets both the total rating and all the ratings.
+    //Gets the user ratings of the recipe.
     @RequestMapping(value="/api/recipe/{id}/ratings", method=RequestMethod.GET)
     public ResponseEntity<?> getRatingsById(@PathVariable String id, @RequestParam(value="token") String token){
-
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
@@ -600,9 +598,38 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: Either the recipe id is invalid or ratings for the recipe don't exist", HttpStatus.NOT_FOUND);
             }
             */
+            //Return the null recipeRating. The front end will handle it.
+            if (recipeRating == null) {
+                return new ResponseEntity<>(recipeRating, HttpStatus.OK);
+            }
 
-            return new ResponseEntity<>(recipeRating, HttpStatus.OK);
+            return new ResponseEntity<>(recipeRating.getRatings(), HttpStatus.OK);
 
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    //Gets the total rating of the recipe.
+    @RequestMapping(value="/api/recipe/{id}/totalrating", method=RequestMethod.GET)
+    public ResponseEntity<?> getTotalRatingById(@PathVariable String id, @RequestParam(value="token") String token){
+
+        try {
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            RecipeRating recipeRating = _ratingCollection.find(eq("_id", new ObjectId(id))).first();
+
+            //If we want to be more precise with the error, we can search for a recipe with the given id and
+            //if nothing is found then the recipe id is invalid. But this will probably do for now.
+
+            //Return the null recipeRating. The front end will handle it.
+            if (recipeRating == null) {
+                return new ResponseEntity<>(recipeRating, HttpStatus.OK);
+            }
+
+            return new ResponseEntity<>(recipeRating.getTotalRating(), HttpStatus.OK);
 
         } catch (SignatureException | ExpiredJwtException e) {
             return new ResponseEntity<>(e, HttpStatus.UNAUTHORIZED);
