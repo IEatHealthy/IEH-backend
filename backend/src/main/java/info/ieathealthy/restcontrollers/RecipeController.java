@@ -810,7 +810,8 @@ public class RecipeController {
             ArrayList<FrontRecipe> matchingRecipes = new ArrayList<>();
 
             //Simple search that searches a recipe name for whatever the user is searching for.
-            FindIterable<Recipe> recipesFound = _recipeCollection.find(regex("name", search, "i"));
+            //I set the limit to 30 for now. Will probably want to change to something else at a later time.
+            FindIterable<Recipe> recipesFound = _recipeCollection.find(regex("name", search, "i")).limit(30);
 
             //Puts the recipes found into the ArrayList so they can be returned.
             for (Recipe rec: recipesFound) {
