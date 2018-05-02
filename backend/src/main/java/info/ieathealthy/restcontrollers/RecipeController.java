@@ -357,8 +357,7 @@ public class RecipeController {
 
         try {
             Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
-            System.out.println(newReview.getUserEmail());
-            System.out.println(newReview.getUserReview());
+
             int wordCount = 0;                    //Word count of review.
             ObjectId recipeId = new ObjectId(id); //Convert the string recipe id to an ObjectId.
             User user = _userCollection.find(eq("email", newReview.getUserEmail())).first();
@@ -640,11 +639,10 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.POST)
-    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating){
+    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating, @RequestParam(value="token") String token){
 
         try {
-            //@RequestParam(value="token") String token
-            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
             double sumOfRatings = 0; //Total sum of the ratings.
@@ -827,6 +825,7 @@ public class RecipeController {
         }
     }
 
+
     //Used to display 20 recipes that the user can see. They are like featured/recommended recipes. The recipes displayed
     //will depend on the user's cooking skill and the top rated recipes. Because there are no rated recipes right now,
     //I won't be implementing it. It'll just get the first 20 recipes found based on the user's cooking skill.
@@ -866,12 +865,44 @@ public class RecipeController {
         }
     }
 
+    //Get bookmarks for a user
+    @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.GET)
+    public ResponseEntity<?> getUserBookmarks(@RequestParam(value="email") String email, @RequestParam(value="token") String token){
+        try {
+
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            ArrayList<String> bookmarkedRecipes = new ArrayList<>(); //Stores the ids to return to the user.
+            User user = _userCollection.find(eq("email", email)).first();
+
+            if (user == null) {
+                return new ResponseEntity<>("Error: User with provided id does not exist.", HttpStatus.NOT_FOUND);
+            }
+
+            //If there are no bookmarked recipes then just return null. The frontend will take care of it.
+            if (user.getBookmarkedRecipes() == null || user.getBookmarkedRecipes().size() == 0) {
+                return new ResponseEntity<>(user.getBookmarkedRecipes(), HttpStatus.OK);
+            }
+
+            //Convert the objectids to strings so that they're not converted to their underlying structure during the return.
+            for (ObjectId id : user.getBookmarkedRecipes()) {
+                bookmarkedRecipes.add(id.toString());
+            }
+
+            return new ResponseEntity<>(bookmarkedRecipes, HttpStatus.OK);
+
+        } catch (SignatureException | ExpiredJwtException e) {
+            return new ResponseEntity<>(e, HttpStatus.FORBIDDEN);
+        } catch (MongoException e) {
+            return new ResponseEntity<>(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     @RequestMapping(value="/api/recipe/bookmark", method=RequestMethod.POST)
-    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email){
+    public ResponseEntity<?> addBookmark(@RequestParam(value="recipeId") String recipeId, @RequestParam(value="email") String email, @RequestParam(value="token") String token){
         try {
-            //@RequestParam(value="token") String token
-            //eJwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+
+            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId actualRecipeId = new ObjectId(recipeId);
 
