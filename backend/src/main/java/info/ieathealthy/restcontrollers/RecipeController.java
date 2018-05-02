@@ -404,6 +404,11 @@ public class RecipeController {
             for (int i = 0; i < reviews.size(); i++) {
 
                 if (reviews.get(i).getUserEmail().equals(newReview.getUserEmail())) {
+
+                    //If they somehow submitted the same review again then don't do anything and just return.
+                    if (reviews.get(i).getUserReview().equals(newReview.getUserReview())) {
+                        return new ResponseEntity<>("Success: Recipe was updated.", HttpStatus.OK);
+                    }
                     //Update the review.
                     reviews.get(i).setUserReview(newReview.getUserReview());
                     UpdateResult result = _reviewCollection.replaceOne(eq("_id", recipeId), recipeReviews);
@@ -608,16 +613,19 @@ public class RecipeController {
 
 
     @RequestMapping(value="/api/recipe/{id}/rate", method=RequestMethod.POST)
-    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating, @RequestParam(value="token") String token){
+    public ResponseEntity<?> rateRecipeById(@PathVariable String id, @RequestBody UserRating newUserRating){
 
         try {
-            Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
+            //@RequestParam(value="token") String token
+            //Jwts.parser().setSigningKey(_sigKey).parseClaimsJws(token);
 
             ObjectId recipeId = new ObjectId(id);
+            double sumOfRatings = 0; //Total sum of the ratings.
             Boolean updatedRating = false; //Records whether the new rating is an update to a previous rating.
             User user = _userCollection.find(eq("email", newUserRating.getUserEmail())).first();
             Recipe recipe = _recipeCollection.find(eq("_id", recipeId)).first();
             RecipeRating recipeRating = _ratingCollection.find(eq("_id", recipeId)).first();
+
 
 
             //Checks if user and recipe with provided ids exist. Also checks that the rating
@@ -642,13 +650,16 @@ public class RecipeController {
 
             }
 
-            //Total sum of the ratings.
-            double sumOfRatings = 0;
 
             //If the user has already rated this recipe then update their rating.
             for (UserRating u : recipeRating.getRatings()) {
 
                 if(u.getUserEmail().equals(newUserRating.getUserEmail())) {
+                    //If their new rating is the same then just return. There's no need to change anything.
+                    if (u.getUserRating() == newUserRating.getUserRating()) {
+                        return new ResponseEntity<>("Success: Recipe was rated.", HttpStatus.OK);
+                    }
+
                     u.setUserRating(newUserRating.getUserRating());
                     updatedRating = true;
                 }
