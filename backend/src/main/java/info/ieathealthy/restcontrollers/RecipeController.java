@@ -78,8 +78,8 @@ public class RecipeController {
                 return new ResponseEntity<>("Error: Could not find user with provider user id", HttpStatus.NOT_FOUND);
 
             } else if (recipe.getName() == null || recipe.getIngredients() == null || recipe.getSteps() == null || recipe.getAuthor() == null ||
-                    recipe.getServings() == 0 || recipe.getPrepTime() == 0 || recipe.getCookTime() == 0 || recipe.getReadyInTime() == 0 ||
-                    recipe.getName().length() == 0 || recipe.getAuthor().length() == 0 || recipe.getFoodImage() == null){
+                    recipe.getServings() < 0 || recipe.getPrepTime() < 0 || recipe.getCookTime() < 0 || recipe.getReadyInTime() < 0 ||
+                    recipe.getName().length() == 0 || recipe.getAuthor().length() == 0){
 
                 return new ResponseEntity<>("Error: Submitted values blank with exception of nutritional values.", HttpStatus.BAD_REQUEST);
             }
